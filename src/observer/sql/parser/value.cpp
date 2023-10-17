@@ -48,14 +48,14 @@ Value::Value(float val)
     set_float(val);
 }
 
-Value::Value(int val)
-{
-    set_date(val);
-}
-
 Value::Value(bool val)
 {
     set_boolean(val);
+}
+
+Value::Value(date_t val)
+{
+    set_date(val);
 }
 
 Value::Value(const char* s, int len /*= 0*/)
@@ -78,7 +78,7 @@ void Value::set_data(char* data, int length)
         length_ = length;
     } break;
     case DATES: {
-        num_value_.date_value_ = *(int*)data;
+        num_value_.date_value_ = *(date_t*)data;
         length_ = length;
     } break;
     case BOOLEANS: {
@@ -103,7 +103,7 @@ void Value::set_float(float val)
     num_value_.float_value_ = val;
     length_ = sizeof(val);
 }
-void Value::set_date(int val)
+void Value::set_date(date_t val)
 {
     attr_type_ = DATES;
     num_value_.date_value_ = val;
@@ -137,7 +137,7 @@ void Value::set_value(const Value& value)
         set_float(value.get_float());
     } break;
     case DATES: {
-        set_date(value.get_date());
+        set_date(date_t(value.get_int()));
     } break;
     case CHARS: {
         set_string(value.get_string().c_str());
@@ -174,7 +174,7 @@ std::string Value::to_string() const
         os << common::double_to_str(num_value_.float_value_);
     } break;
     case DATES: {
-        os << num_value_.date_value_;
+        os << common::date_to_str(num_value_.date_value_.date_hash);
     } break;
     case BOOLEANS: {
         os << num_value_.bool_value_;
@@ -200,6 +200,7 @@ int Value::compare(const Value& other) const
             return common::compare_float((void*)&this->num_value_.float_value_, (void*)&other.num_value_.float_value_);
         } break;
         case DATES: {
+            return common::compare_int((void*)&this->num_value_.date_value_, (void*)&other.num_value_.date_value_);
         }
         case CHARS: {
             return common::compare_string((void*)this->str_value_.c_str(),

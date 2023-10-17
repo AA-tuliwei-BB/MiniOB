@@ -120,6 +120,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 }
 
 %token <number> NUMBER
+%token <number> DATE
 %token <floats> FLOAT
 %token <string> ID
 %token <string> SSS
@@ -386,6 +387,10 @@ value:
       char *tmp = common::substr($1,1,strlen($1)-2);
       $$ = new Value(tmp);
       free(tmp);
+    }
+    |DATE {
+      $$ = new Value((date_t)$1);
+      @$ = @1;
     }
     ;
     

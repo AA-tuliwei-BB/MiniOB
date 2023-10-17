@@ -22,6 +22,7 @@ do {                                                         \
 }                                                            \
 while (0);
 
+bool check_date(int y, int m, int d);
 }
 
 %{
@@ -79,8 +80,16 @@ QUOTE            [\'\"]
 
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
-(1|2)?[0-9]{3}\-(0|1)?[0-9]\-[0-3]?[0-9] yylval->string=strdup(yytext); RETURN_TOKEN(DATES);
-
+{QUOTE}(1|2)?[0-9]{3}\-(0|1)?[0-9]\-[0-3]?[0-9]{QUOTE}  {
+  int year, month, day;
+  const int year_weight = 400 * 40, month_weight = 40;
+  sscanf(yytext, "%*c%d%*c%d%*c%d%*c", &year, &month, &day);
+  if(check_date(year, month, day)){
+    yylval -> number = year * year_weight + month * month_weight + day;
+    RETURN_TOKEN(DATE);
+  }
+  yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
+}
 ";"                                     RETURN_TOKEN(SEMICOLON);
 {DOT}                                   RETURN_TOKEN(DOT);
 EXIT                                    RETURN_TOKEN(EXIT);
@@ -141,4 +150,13 @@ EXPLAIN                                 RETURN_TOKEN(EXPLAIN);
 
 void scan_string(const char *str, yyscan_t scanner) {
   yy_switch_to_buffer(yy_scan_string(str, scanner), scanner);
+}
+
+bool check_date(int y, int m, int d)
+{
+    static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    bool leap = (y % 400 == 0 || (y % 100 && y % 4 == 0));
+    return (y >= 1970 && (y < 2038 || y == 2038 && m <= 2))
+        && (m > 0)&&(m <= 12)
+        && (d > 0)&&(d <= ((m==2 && leap)?1:0) + mon[m]);
 }

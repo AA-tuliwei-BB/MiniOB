@@ -289,7 +289,9 @@ std::string date_to_str(int date)
 {
     char buf[13];
     const int year_weight = 400 * 40, month_weight = 40;
-    int year = date / year_weight, month = date % year_weight / month_weight, day = date % month;
-    snprintf(buf, sizeof(buf), "%d-%d-%d", year, month, day);
+    int year = date / year_weight, month = date % year_weight / month_weight, day = date % month_weight;
+    snprintf(buf, sizeof(buf), "%04d-%02d-%02d", year, month, day);
+
+    return std::string(buf, strlen(buf));
 }
 } // namespace common
