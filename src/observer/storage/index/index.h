@@ -53,6 +53,8 @@ public:
    */
   virtual RC insert_entry(const char *record, const RID *rid) = 0;
 
+  virtual RC close() = 0;
+
   /**
    * @brief 删除一条数据
    * 

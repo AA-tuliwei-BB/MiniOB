@@ -126,6 +126,54 @@ RC Table::create(int32_t table_id,
   return rc;
 }
 
+// path 是元数据文件地址
+RC Table::destroy(const char *path)
+{
+  const char *name = this->table_meta().name();
+  RC rc = RC::SUCCESS;
+
+  // 销毁recordmanager
+  if (this->record_handler_ != nullptr) {
+    // delete 会close
+    delete record_handler_;
+    this->record_handler_ = nullptr;
+  }
+
+  // 关闭bufferpool
+  if (this->data_buffer_pool_ != nullptr) {
+    data_buffer_pool_->close_file();
+    this->data_buffer_pool_ = nullptr;
+  }
+
+  // 删除元数据和数据文件
+  if (unlink(path) != 0) {
+    LOG_ERROR("Fail to remove meta file, path: %s", path);
+    rc = RC::FILE_REMOVE;
+  }
+  if (unlink(table_data_file(base_dir_.c_str(), name).c_str()) != 0) {
+    LOG_ERROR("Fail to remove data file, path: %s", table_data_file(base_dir_.c_str(), name).c_str());
+    rc = RC::FILE_REMOVE;
+  }
+
+  // TODO when implement text
+
+  // 清除index脏页，销毁index，并删除index文件
+  for (auto index : this->indexes_) {
+    std::string index_path = table_index_file(this->base_dir_.c_str(), name, index->index_meta().name());
+    if (index != nullptr) {
+      index->close();
+    } else {
+      LOG_ERROR("null index!");
+    }
+    if (unlink(index_path.c_str()) != 0) {
+      LOG_ERROR("Fail to remove index file, path: %s", index_path.c_str());
+      rc = RC::FILE_REMOVE;
+    }
+  }
+  return rc;
+}
+
+
 RC Table::open(const char *meta_file, const char *base_dir)
 {
   // 加载元数据文件

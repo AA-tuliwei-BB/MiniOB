@@ -101,6 +101,23 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfoS
   return RC::SUCCESS;
 }
 
+RC Db::drop_table(const char* table_name)
+{
+  // 查找表
+  auto it = this->opened_tables_.find(table_name);
+  // 表不存在
+  if (it == this->opened_tables_.end()) {
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  // 删除表
+  Table *table = it->second;
+  std::string meta_path = table_meta_file(this->path_.c_str(), table_name);
+  table->destroy(meta_path.c_str());
+  delete table;
+  this->opened_tables_.erase(it);
+  return RC::SUCCESS;
+}
+
 Table *Db::find_table(const char *table_name) const
 {
   std::unordered_map<std::string, Table *>::const_iterator iter = opened_tables_.find(table_name);

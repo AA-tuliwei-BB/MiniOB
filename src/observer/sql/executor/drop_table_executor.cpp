@@ -18,8 +18,9 @@ RC DropTableExecutor::execute(SQLStageEvent *sql_event)
 {
   RC rc = RC::SUCCESS;
   Stmt *stmt = sql_event->stmt();
-  SessionEvent *session_event = sql_event->session_event();
-  Session *session = session_event->session();
-  //TODO implement execute()
-  return rc;
+  ASSERT(stmt->type() == StmtType::DROP_TABLE, 
+         "drop table executor can not run this command: %d", static_cast<int>(stmt->type()));
+  Session *session = sql_event->session_event()->session();
+  DropTableStmt *drop_table_stmt = static_cast<DropTableStmt*> (stmt);
+  return session->get_current_db()->drop_table(drop_table_stmt->table_name().c_str());
 }
