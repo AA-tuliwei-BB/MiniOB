@@ -29,7 +29,7 @@ enum AttrType {
     BOOLEANS, ///< boolean类型，当前不是由parser解析出来的，是程序内部使用的
 };
 
-typedef struct Date_t{
+typedef struct{
     int date_hash;
 }date_t;
 

@@ -81,6 +81,15 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     const ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
   RC rc = RC::SUCCESS;
+  const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
+    0, 0, 0, 0, 0, 0,
+    0, 1, 1, 0, 1, 1,
+    0, 1, 1, 0, 1, 1,
+    0, 0, 0, 1, 0, 1,
+    0, 1, 1, 0, 1, 1,
+    0, 1, 1, 1, 1, 1,
+  };
+  int left_attr, right_attr;
 
   CompOp comp = condition.comp;
   if (comp < EQUAL_TO || comp >= NO_OP) {
@@ -101,10 +110,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_left(filter_obj);
+    left_attr = filter_obj.field.attr_type();
   } else {
     FilterObj filter_obj;
     filter_obj.init_value(condition.left_value);
     filter_unit->set_left(filter_obj);
+    left_attr = filter_obj.value.attr_type();
   }
 
   if (condition.right_is_attr) {
@@ -118,14 +129,21 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_right(filter_obj);
+    right_attr = filter_obj.field.attr_type();
   } else {
     FilterObj filter_obj;
     filter_obj.init_value(condition.right_value);
     filter_unit->set_right(filter_obj);
+    right_attr = filter_obj.value.attr_type();
   }
 
   filter_unit->set_comp(comp);
 
   // 检查两个类型是否能够比较
+  if (!field_type_compare_compatible_table[left_attr][right_attr]) {
+     // 不能比较的两个字段， 要把信息传给客户端
+     return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+  }
+  
   return rc;
 }

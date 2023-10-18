@@ -62,6 +62,14 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
   const TableMeta &table_meta = table.table_meta();
   ConDesc left;
   ConDesc right;
+  const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
+    0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1,
+    0, 1, 1, 0, 1, 1,
+    0, 1, 0, 1, 0, 1,
+    0, 1, 1, 0, 1, 1,
+    0, 1, 1, 1, 1, 1,
+  };
 
   AttrType type_left = UNDEFINED;
   AttrType type_right = UNDEFINED;
@@ -106,15 +114,15 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
   }
 
   // 校验和转换
-  //  if (!field_type_compare_compatible_table[type_left][type_right]) {
-  //    // 不能比较的两个字段， 要把信息传给客户端
-  //    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  //  }
+   if (!field_type_compare_compatible_table[type_left][type_right]) {
+     // 不能比较的两个字段， 要把信息传给客户端
+     return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+   }
   // NOTE：这里没有实现不同类型的数据比较，比如整数跟浮点数之间的对比
   // 但是选手们还是要实现。这个功能在预选赛中会出现
-  if (type_left != type_right) {
-    return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-  }
+  // if (type_left != type_right) {
+  //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+  // }
 
   return init(left, right, type_left, condition.comp);
 }
