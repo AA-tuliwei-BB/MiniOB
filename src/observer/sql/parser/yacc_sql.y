@@ -92,6 +92,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         DATA
         INFILE
         EXPLAIN
+        LK
         EQ
         LT
         GT
@@ -597,6 +598,17 @@ condition:
       $$->right_is_attr = 0;
       $$->right_value = *$3;
       $$->comp = $2;
+
+      delete $1;
+      delete $3;
+    }
+    |rel_attr LK value{
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 0;
+      $$->right_value = *$3;
+      $$->comp = LIKE;
 
       delete $1;
       delete $3;

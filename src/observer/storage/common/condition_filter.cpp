@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "condition_filter.h"
 #include "storage/record/record_manager.h"
 #include "common/log/log.h"
+#include "common/lang/comparator.h"
 #include "storage/table/table.h"
 #include "sql/parser/value.h"
 
@@ -64,9 +65,9 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
   ConDesc right;
   const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
     0, 0, 0, 0, 0, 0,
-    0, 1, 1, 1, 1, 1,
     0, 1, 1, 0, 1, 1,
-    0, 1, 0, 1, 0, 1,
+    0, 1, 1, 0, 1, 1,
+    0, 0, 0, 1, 0, 1,
     0, 1, 1, 0, 1, 1,
     0, 1, 1, 1, 1, 1,
   };
@@ -144,6 +145,10 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     right_value.set_data(rec.data() + right_.attr_offset, right_.attr_length);
   } else {
     right_value.set_value(right_.value);
+  }
+
+  if(comp_op_ == LIKE){
+    return common::like_match(left_value.get_string(), right_value.get_string());
   }
 
   int cmp_result = left_value.compare(right_value);
