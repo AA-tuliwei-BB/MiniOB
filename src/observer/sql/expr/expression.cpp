@@ -91,8 +91,9 @@ ComparisonExpr::~ComparisonExpr()
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC rc = RC::SUCCESS;
-  if(comp_ == LIKE){
+  if(comp_ == LIKE || comp_ == NOT_LIKE){
     result = common::like_match(left.get_string(), right.get_string());
+    if(comp_ == NOT_LIKE) result = !result;
     return rc;
   }
   int cmp_result = left.compare(right);

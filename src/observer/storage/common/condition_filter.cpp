@@ -147,8 +147,9 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     right_value.set_value(right_.value);
   }
 
-  if(comp_op_ == LIKE){
-    return common::like_match(left_value.get_string(), right_value.get_string());
+  if(comp_op_ == LIKE || comp_op_ == NOT_LIKE){
+    bool result = common::like_match(left_value.get_string(), right_value.get_string());
+    return comp_op_ == NOT_LIKE ? !result : result;
   }
 
   int cmp_result = left_value.compare(right_value);

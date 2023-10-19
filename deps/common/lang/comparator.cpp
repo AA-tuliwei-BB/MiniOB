@@ -93,7 +93,6 @@ bool like_match(const std::string &s1, const std::string &s2){
         can_match |= state[i * (l1 + 1) + j];
         state[(i + 1) * (l1 + 1) + j] = can_match;
       }
-      state[(i + 1) * (l1 + 1) + l1] = can_match;
       break;
     default:
       for(int j = 0; j < l1; ++j){

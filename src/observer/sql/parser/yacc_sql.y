@@ -93,6 +93,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         INFILE
         EXPLAIN
         LK
+        NOT_LK
         EQ
         LT
         GT
@@ -602,17 +603,6 @@ condition:
       delete $1;
       delete $3;
     }
-    |rel_attr LK value{
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 1;
-      $$->left_attr = *$1;
-      $$->right_is_attr = 0;
-      $$->right_value = *$3;
-      $$->comp = LIKE;
-
-      delete $1;
-      delete $3;
-    }
     | value comp_op value 
     {
       $$ = new ConditionSqlNode;
@@ -658,6 +648,8 @@ comp_op:
     | LE { $$ = LESS_EQUAL; }
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
+    | LK { $$ = LIKE;  }
+    | NOT_LK { $$ = NOT_LIKE;  }
     ;
 
 load_data_stmt:
