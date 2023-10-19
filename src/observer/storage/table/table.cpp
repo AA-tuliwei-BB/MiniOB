@@ -255,6 +255,23 @@ RC Table::insert_record(Record &record)
   return rc;
 }
 
+RC Table::update_record(const RID &rid, Record &record)
+{
+  // 删除原索引，修改，创建新索引
+  Record before;
+  get_record(rid, before);
+  for (auto index : this->indexes_) {
+    index->delete_entry(before.data(), &rid);
+  }
+  auto visitor = [&record](Record &visited_record) {
+    memcpy(visited_record.data(), record.data(), record.len());
+  };
+  record_handler_->visit_record(rid, false, visitor);
+  for (auto index : this->indexes_) {
+    index->insert_entry(record.data(), &rid);
+  }
+}
+
 RC Table::visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor)
 {
   return record_handler_->visit_record(rid, readonly, visitor);
