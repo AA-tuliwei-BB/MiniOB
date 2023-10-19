@@ -287,6 +287,7 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       }
     }
   }
+  return RC::SUCCESS;
 }
 
 RC Table::visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor)
