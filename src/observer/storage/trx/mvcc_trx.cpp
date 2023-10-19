@@ -185,9 +185,9 @@ RC MvccTrx::delete_record(Table * table, Record &record)
   return RC::SUCCESS;
 }
 
-RC update_record(Table *table, RID &rid, Record &record)
+RC MvccTrx::update_record(Table *table, RID &rid, std::vector<std::string> &fields, std::vector<Value> &values)
 {
-
+  return RC::SUCCESS;
 }
 
 RC MvccTrx::visit_record(Table *table, Record &record, bool readonly)
