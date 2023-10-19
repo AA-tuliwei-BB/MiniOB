@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
+#include "common/lang/comparator.h"
 
 using namespace std;
 
@@ -86,9 +87,15 @@ ComparisonExpr::ComparisonExpr(CompOp comp, unique_ptr<Expression> left, unique_
 ComparisonExpr::~ComparisonExpr()
 {}
 
+
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC rc = RC::SUCCESS;
+  if(comp_ == LIKE || comp_ == NOT_LIKE){
+    result = common::like_match(left.get_string(), right.get_string());
+    if(comp_ == NOT_LIKE) result = !result;
+    return rc;
+  }
   int cmp_result = left.compare(right);
   result = false;
   switch (comp_) {
