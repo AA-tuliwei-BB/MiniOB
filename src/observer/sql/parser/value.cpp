@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "storage/field/field.h"
 #include <sstream>
+#include "value.h"
 
 const char* ATTR_TYPE_NAME[] = { "undefined", "chars", "ints", "floats", "dates", "booleans" };
 
@@ -149,6 +150,11 @@ void Value::set_value(const Value& value)
         ASSERT(false, "got an invalid value type");
     } break;
     }
+}
+
+void Value::set_null()
+{
+    this->attr_type_ = AttrType::NULLS;
 }
 
 const char* Value::data() const
@@ -328,3 +334,5 @@ bool Value::get_boolean() const
     }
     return false;
 }
+
+bool Value::is_null() const { return this->attr_type_ == AttrType::NULLS; }
