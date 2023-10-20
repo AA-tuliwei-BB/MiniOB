@@ -157,7 +157,7 @@ struct ConditionSqlNode
 
 struct SelectSqlNode
 {
-  std::vector<ExprSqlNode>        attributes;    ///< attributes in select clause
+  std::vector<ExprSqlNode>        expressions;    ///< attributes in select clause
   std::vector<std::string>        relations;     ///< 查询的表
   std::vector<ConditionSqlNode>   conditions;    ///< 查询条件，使用AND串联起来多个条件
 };

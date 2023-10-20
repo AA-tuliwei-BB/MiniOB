@@ -77,4 +77,7 @@ private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   FilterStmt *filter_stmt_ = nullptr;
+  bool IsAggregate;
+  std::vector<std::string> alias;
+  std::vector<std::unique_ptr<Expression>> expressions_;
 };
