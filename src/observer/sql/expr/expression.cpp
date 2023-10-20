@@ -339,14 +339,14 @@ RC ArithmeticExpr::try_get_value(Value &value) const
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-AggrFunctionExpr::AggrFunctionExpr(Type type, Expression *son) : func_type_(type), son_(son) { count_ = 0; }
+AggrFuncExpr::AggrFuncExpr(Type type, Expression *son) : func_type_(type), son_(son) { count_ = 0; }
 
-AggrFunctionExpr::AggrFunctionExpr(Type type, std::unique_ptr<Expression> son) : func_type_(type), son_(std::move(son))
+AggrFuncExpr::AggrFuncExpr(Type type, std::unique_ptr<Expression> son) : func_type_(type), son_(std::move(son))
 {
   count_ = 0;
 }
 
-AttrType AggrFunctionExpr::value_type() const
+AttrType AggrFuncExpr::value_type() const
 {
   switch (func_type_) {
   case Type::AVG_FUNC : {
@@ -366,7 +366,7 @@ AttrType AggrFunctionExpr::value_type() const
   }
 }
 
-RC AggrFunctionExpr::add_value(const Tuple &tuple)
+RC AggrFuncExpr::add_value(const Tuple &tuple)
 {
   RC rc = RC::SUCCESS;
 
@@ -433,7 +433,7 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
   return rc;
 }
 
-RC AggrFunctionExpr::get_value(Value &value) const
+RC AggrFuncExpr::get_value(Value &value) const
 {
   if (count_ == 0 && func_type_ != Type::COUNT_FUNC) {
     value.set_null();
@@ -476,7 +476,7 @@ RC AggrFunctionExpr::get_value(Value &value) const
   return RC::SUCCESS;
 }
 
-RC AggrFunctionExpr::try_get_value(Value &value) const
+RC AggrFuncExpr::try_get_value(Value &value) const
 {
   Value son_value;
   RC rc = son_->try_get_value(son_value);

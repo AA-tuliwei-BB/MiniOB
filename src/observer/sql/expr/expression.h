@@ -33,7 +33,7 @@ class Tuple;
  * @brief 表达式类型
  * @ingroup Expression
  */
-enum class ExprType 
+enum class ExprType
 {
   NONE,
   STAR,         ///< 星号，表示所有字段
@@ -43,7 +43,8 @@ enum class ExprType
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
-  AGGRFUNC,   ///< 聚合函数
+  AGGRFUNC,     ///< 聚合函数
+  FUNCTION,     ///< 普通函数
 };
 
 /**
@@ -302,7 +303,7 @@ private:
   std::unique_ptr<Expression> right_;
 };
 
-class AggrFunctionExpr : public Expression
+class AggrFuncExpr : public Expression
 {
 public:
   enum class Type {
@@ -314,16 +315,17 @@ public:
   };
 
 public:
-  AggrFunctionExpr(Type type, Expression *son);
-  AggrFunctionExpr(Type type, std::unique_ptr<Expression> son);
+  AggrFuncExpr(Type type, Expression *son);
+  AggrFuncExpr(Type type, std::unique_ptr<Expression> son);
 
   ExprType type() const override { return ExprType::AGGRFUNC; }
-  virtual ~AggrFunctionExpr() = default;
+  virtual ~AggrFuncExpr() = default;
 
   AttrType value_type() const override;
 
   RC add_value(const Tuple &tuple);
   RC get_value(Value &value) const;
+  RC get_value(const Tuple &tuple, Value &value) const { return RC::UNIMPLENMENT; }
   RC try_get_value(Value &value) const override;
 
   Type func_type() const { return func_type_; }

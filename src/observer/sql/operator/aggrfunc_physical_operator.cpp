@@ -42,7 +42,7 @@ RC AggrFuncPhysicalOperator::next()
     RowTuple *row_tuple = static_cast<RowTuple *>(tuple);
     int expr_size = static_cast<int>(expressions_.size());
     for (int i = 0; i < expr_size; ++i) {
-      AggrFunctionExpr *expr = static_cast<AggrFunctionExpr *>(expressions_[i].get());
+      AggrFuncExpr *expr = static_cast<AggrFuncExpr *>(expressions_[i].get());
       rc = expr->add_value(*row_tuple);
       if (rc != RC::SUCCESS) {
         LOG_WARN("failed to delete record: %s", strrc(rc));

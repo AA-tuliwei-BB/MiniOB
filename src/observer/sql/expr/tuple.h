@@ -325,7 +325,7 @@ public:
 
     const Expression *expr = expressions_[index].get();
     if (expr->type() == ExprType::AGGRFUNC) {
-      const AggrFunctionExpr *aggrfunc_expr = static_cast<const AggrFunctionExpr *>(expr);
+      const AggrFuncExpr *aggrfunc_expr = static_cast<const AggrFuncExpr *>(expr);
       return aggrfunc_expr->get_value(cell);
     } else {
       return expr->try_get_value(cell);
