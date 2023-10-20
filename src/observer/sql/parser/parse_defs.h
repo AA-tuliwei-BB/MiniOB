@@ -47,12 +47,68 @@ enum function_type{
   FUNC_DATE_FORMAT,
 };
 
-struct RelAttrSqlNode
+
+
+struct ExprSqlNode{
+  enum Type{
+  VALUE_EXPR,
+  REL_ATTR_EXPR,
+  FUNC_EXPR,
+  AGGR_FUNC_EXPR,
+  ARITHMATIC_EXPR,
+};
+  virtual ExprSqlNode::Type get_type() const = 0;
+};
+
+struct ValueSqlNode : public ExprSqlNode
+{
+  Value val;
+  ExprSqlNode::Type get_type(){
+     return VALUE_EXPR; 
+  };
+};
+
+struct RelAttrSqlNode : public ExprSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
   std::string alias_name;
-  function_type function_name = NO_FUNCTION;
+  ExprSqlNode::Type get_type(){
+     return REL_ATTR_EXPR; 
+  };
+};
+
+struct ArithSqlNode : public ExprSqlNode
+{
+  enum class OperationType {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    NEGATIVE,
+  };
+  std::unique_ptr<ExprSqlNode> left;
+  std::unique_ptr<ExprSqlNode> right;
+  OperationType type;
+  ExprSqlNode::Type get_type(){
+     return ARITHMATIC_EXPR; 
+  };
+};
+
+struct AggrSqlNode : public ExprSqlNode{
+  std::unique_ptr<ExprSqlNode> son;
+  function_type type;
+  ExprSqlNode::Type get_type(){
+     return AGGR_FUNC_EXPR; 
+  };
+};
+
+struct FuncSqlNode : public ExprSqlNode{
+  std::unique_ptr<ExprSqlNode> son;
+  function_type type;
+  ExprSqlNode::Type get_type(){
+     return FUNC_EXPR; 
+  };
 };
 
 /**

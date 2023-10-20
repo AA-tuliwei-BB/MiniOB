@@ -2213,7 +2213,7 @@ yyreduce:
   case 68: /* expression: MAX_FUNC LBRACE expression RBRACE  */
 #line 528 "yacc_sql.y"
                                         {
-      (yyval.expression) = new AggrFunctionExpr(AggrFunctionExpr::Type::MAX_FUNC, (yyvsp[-1].expression));      
+      (yyval.expression) = new AggrFuncExpr(AggrFuncExpr::Type::MAX_FUNC, (yyvsp[-1].expression));      
     }
 #line 2219 "yacc_sql.cpp"
     break;
@@ -2221,7 +2221,7 @@ yyreduce:
   case 69: /* expression: MIN_FUNC LBRACE expression RBRACE  */
 #line 531 "yacc_sql.y"
                                         {
-      (yyval.expression) = new AggrFunctionExpr(AggrFunctionExpr::Type::MIN_FUNC, (yyvsp[-1].expression));      
+      (yyval.expression) = new AggrFuncExpr(AggrFuncExpr::Type::MIN_FUNC, (yyvsp[-1].expression));      
     }
 #line 2227 "yacc_sql.cpp"
     break;
@@ -2229,7 +2229,7 @@ yyreduce:
   case 70: /* expression: COUNT_FUNC LBRACE expression RBRACE  */
 #line 534 "yacc_sql.y"
                                           {
-      (yyval.expression) = new AggrFunctionExpr(AggrFunctionExpr::Type::COUNT_FUNC, (yyvsp[-1].expression));      
+      (yyval.expression) = new AggrFuncExpr(AggrFuncExpr::Type::COUNT_FUNC, (yyvsp[-1].expression));      
     }
 #line 2235 "yacc_sql.cpp"
     break;
@@ -2237,7 +2237,7 @@ yyreduce:
   case 71: /* expression: AVG_FUNC LBRACE expression RBRACE  */
 #line 537 "yacc_sql.y"
                                        {
-      (yyval.expression) = new AggrFunctionExpr(AggrFunctionExpr::Type::AVG_FUNC, (yyvsp[-1].expression));
+      (yyval.expression) = new AggrFuncExpr(AggrFuncExpr::Type::AVG_FUNC, (yyvsp[-1].expression));
     }
 #line 2243 "yacc_sql.cpp"
     break;
@@ -2245,7 +2245,7 @@ yyreduce:
   case 72: /* expression: SUM_FUNC LBRACE expression RBRACE  */
 #line 540 "yacc_sql.y"
                                         {
-      (yyval.expression) = new AggrFunctionExpr(AggrFunctionExpr::Type::SUM_FUNC, (yyvsp[-1].expression));      
+      (yyval.expression) = new AggrFuncExpr(AggrFuncExpr::Type::SUM_FUNC, (yyvsp[-1].expression));      
     }
 #line 2251 "yacc_sql.cpp"
     break;

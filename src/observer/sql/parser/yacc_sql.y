@@ -526,19 +526,19 @@ expression:
       delete $1;
     }
     | MAX_FUNC LBRACE expression RBRACE {
-      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::MAX_FUNC, $3);      
+      $$ = new AggrFuncExpr(AggrFuncExpr::Type::MAX_FUNC, $3);      
     }
     | MIN_FUNC LBRACE expression RBRACE {
-      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::MIN_FUNC, $3);      
+      $$ = new AggrFuncExpr(AggrFuncExpr::Type::MIN_FUNC, $3);      
     }
     | COUNT_FUNC LBRACE expression RBRACE {
-      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::COUNT_FUNC, $3);      
+      $$ = new AggrFuncExpr(AggrFuncExpr::Type::COUNT_FUNC, $3);      
     }
     | AVG_FUNC LBRACE expression RBRACE{
-      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::AVG_FUNC, $3);
+      $$ = new AggrFuncExpr(AggrFuncExpr::Type::AVG_FUNC, $3);
     }
     | SUM_FUNC LBRACE expression RBRACE {
-      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::SUM_FUNC, $3);      
+      $$ = new AggrFuncExpr(AggrFuncExpr::Type::SUM_FUNC, $3);      
     }
     ;
 
