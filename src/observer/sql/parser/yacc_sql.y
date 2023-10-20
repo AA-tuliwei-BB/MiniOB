@@ -78,6 +78,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         STRING_T
         FLOAT_T
         DATE_T
+        NULL
         HELP
         EXIT
         DOT //QUOTE
@@ -86,6 +87,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         FROM
         WHERE
         AND
+        NOT
         SET
         ON
         LOAD
@@ -93,7 +95,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         INFILE
         EXPLAIN
         LK
-        NOT_LK
         EQ
         LT
         GT
@@ -136,6 +137,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <comp>                comp_op
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
+%type <bool>                null_def
 %type <attr_info>           attr_def
 %type <value_list>          value_list
 %type <condition_list>      where
@@ -320,23 +322,38 @@ attr_def_list:
     ;
     
 attr_def:
-    ID type LBRACE number RBRACE 
+    ID type LBRACE number RBRACE null_def
     {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
+      $$->nullable = $6;
       free($1);
     }
-    | ID type
+    | ID type null_def
     {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = 4;
+      $$->nullable = $3;
       free($1);
     }
     ;
+null_def:
+    /* empty */
+    {
+      $$ = true;
+    }
+    | NOT NULL
+    {
+      $$ = false;
+    }
+    | NULL
+    {
+      $$ = true;
+    }
 number:
     NUMBER {$$ = $1;}
     ;
@@ -392,6 +409,10 @@ value:
     }
     |DATE {
       $$ = new Value((date_t)$1);
+      @$ = @1;
+    }
+    |NULL {
+      $$ = new Value((null_t)$1);
       @$ = @1;
     }
     ;
@@ -649,7 +670,7 @@ comp_op:
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
     | LK { $$ = LIKE;  }
-    | NOT_LK { $$ = NOT_LIKE;  }
+    | NOT LK { $$ = NOT_LIKE;  }
     ;
 
 load_data_stmt:

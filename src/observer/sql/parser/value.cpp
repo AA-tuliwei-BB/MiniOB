@@ -59,6 +59,11 @@ Value::Value(date_t val)
     set_date(val);
 }
 
+Value::Value(null_t val)
+{
+    set_null();
+}
+
 Value::Value(const char* s, int len /*= 0*/)
 {
     set_string(s, len);
@@ -86,6 +91,8 @@ void Value::set_data(char* data, int length)
         num_value_.bool_value_ = *(int*)data != 0;
         length_ = length;
     } break;
+    case NULLS:{
+    } break;
     default: {
         LOG_WARN("unknown data type: %d", attr_type_);
     } break;
@@ -104,12 +111,21 @@ void Value::set_float(float val)
     num_value_.float_value_ = val;
     length_ = sizeof(val);
 }
+
 void Value::set_date(date_t val)
 {
     attr_type_ = DATES;
     num_value_.date_value_ = val;
     length_ = sizeof(val);
 }
+
+void Value::set_null(null_t val)
+{
+    attr_type_ = NULLS;
+    num_value_.null_value_ = 0;
+    length_ = sizeof(val);
+}
+
 void Value::set_boolean(bool val)
 {
     attr_type_ = BOOLEANS;
@@ -188,6 +204,9 @@ std::string Value::to_string() const
     case CHARS: {
         os << str_value_;
     } break;
+    case NULLS: {
+        break;
+    }
     default: {
         LOG_WARN("unsupported attr type: %d", attr_type_);
     } break;
@@ -217,6 +236,9 @@ int Value::compare(const Value& other) const
         case BOOLEANS: {
             return common::compare_int((void*)&this->num_value_.bool_value_, (void*)&other.num_value_.bool_value_);
         }
+        case NULLS:{
+            return false;
+        }
         default: {
             LOG_WARN("unsupported type: %d", this->attr_type_);
         }
@@ -227,7 +249,8 @@ int Value::compare(const Value& other) const
     } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
         float other_data = other.num_value_.int_value_;
         return common::compare_float((void*)&this->num_value_.float_value_, (void*)&other_data);
-    }
+    } else if(this->attr_type == NULLS || other.attr_type == NULLS)
+        return false;
     LOG_WARN("not supported");
     return -1; // TODO return rc?
 }
@@ -323,6 +346,9 @@ bool Value::get_boolean() const
     } break;
     case DATES: {
         return true;
+    } break;
+    case NULLS: {
+        return false;
     } break;
     case BOOLEANS: {
         return num_value_.bool_value_;

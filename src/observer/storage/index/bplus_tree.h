@@ -74,6 +74,9 @@ public:
         case CHARS: {
             return common::compare_string((void*)v1, attr_length_, (void*)v2, attr_length_);
         }
+        case NULLS:{
+            return false;
+        }
         default: {
             ASSERT(false, "unknown attr type. %d", attr_type_);
             return 0;
@@ -155,6 +158,9 @@ public:
                 str.push_back(v[i]);
             }
             return str;
+        }
+        case NULLS:{
+            return std::string("null");
         }
         default: {
             ASSERT(false, "unknown attr type. %d", attr_type_);
