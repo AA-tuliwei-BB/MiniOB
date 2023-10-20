@@ -265,9 +265,9 @@ public:
     if (tuple_ == nullptr) {
       return RC::INTERNAL;
     }
-
-    const TupleCellSpec *spec = speces_[index];
-    return tuple_->find_cell(*spec, cell);
+    return tuple_->cell_at(index, cell);
+    //const TupleCellSpec *spec = speces_[index];
+    //return tuple_->find_cell(*spec, cell);
   }
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override

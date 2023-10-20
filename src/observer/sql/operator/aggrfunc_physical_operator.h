@@ -14,7 +14,7 @@ public:
 
   PhysicalOperatorType type() const override
   {
-    return PhysicalOperatorType::CALC;
+    return PhysicalOperatorType::AGGRFUNC;
   }
 
   std::string name() const override { return "CALC"; }
