@@ -34,11 +34,25 @@ class Expression;
  * Rel -> Relation
  * Attr -> Attribute
  */
+
+enum function_type{
+  NO_FUNCTION,
+  AGGR_MAX,
+  AGGR_MIN,
+  AGGR_COUNT,
+  AGGR_AVG,
+  AGGR_SUM,
+  FUNC_LENGTH,
+  FUNC_ROUND,
+  FUNC_DATE_FORMAT,
+};
+
 struct RelAttrSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
   std::string alias_name;
+  function_type function_name = NO_FUNCTION;
 };
 
 /**

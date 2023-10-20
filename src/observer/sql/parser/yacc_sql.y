@@ -520,6 +520,9 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
+    | MAX expression{
+      
+    }
     ;
 
 select_attr:
