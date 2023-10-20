@@ -369,8 +369,17 @@ AttrType AggrFunctionExpr::value_type() const
 RC AggrFunctionExpr::add_value(const Tuple &tuple)
 {
   RC rc = RC::SUCCESS;
-  Value son_value;
 
+  if (son_->type() == ExprType::STAR) {
+    if (func_type_ == Type::COUNT_FUNC) {
+      count_++;
+      return rc;
+    } else {
+      return RC::INTERNAL;
+    }
+  }
+
+  Value son_value;
   rc = son_->get_value(tuple, son_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of son expression. rc=%s", strrc(rc));
