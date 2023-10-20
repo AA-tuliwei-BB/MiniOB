@@ -31,11 +31,15 @@ public:
 
   std::unique_ptr<Expression> &son() { return son_; }
 
+  void set_format_string(std::string str) { format_string_ = str; }
+  void set_round_bits(int bits) { round_bits_ = bits; }
+
 private:
-  RC calc_value(const Value &son, Value &value) const;
+  RC calc_value(const Value &son_value, Value &value) const;
   
 private:
   Type func_type_;
   std::unique_ptr<Expression> son_;
   std::string format_string_;
+  int round_bits_;
 };
