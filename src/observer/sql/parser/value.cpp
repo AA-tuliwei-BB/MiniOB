@@ -61,7 +61,7 @@ Value::Value(date_t val)
 
 Value::Value(null_t val)
 {
-    set_null(0);
+    set_null();
 }
 
 Value::Value(const char* s, int len /*= 0*/)
@@ -119,11 +119,11 @@ void Value::set_date(date_t val)
     length_ = sizeof(val);
 }
 
-void Value::set_null(null_t val)
+void Value::set_null()
 {
     attr_type_ = NULLS;
     num_value_.null_value_ = 0;
-    length_ = sizeof(val);
+    length_ = sizeof(null_t);
 }
 
 void Value::set_boolean(bool val)

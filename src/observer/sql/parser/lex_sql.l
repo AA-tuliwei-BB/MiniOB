@@ -109,7 +109,7 @@ MAX                                     RETURN_TOKEN(MAX_FUNC);
 MIN                                     RETURN_TOKEN(MIN_FUNC);
 COUNT                                   RETURN_TOKEN(COUNT_FUNC);
 AVG                                     RETURN_TOKEN(AVG_FUNC);
-SUM                                     RETURN_TOKEN(SUM);
+SUM                                     RETURN_TOKEN(SUM_FUNC);
 FROM                                    RETURN_TOKEN(FROM);
 WHERE                                   RETURN_TOKEN(WHERE);
 AS                                      RETURN_TOKEN(AS);

@@ -61,6 +61,11 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         TABLES
         INDEX
         CALC
+        MAX_FUNC
+        MIN_FUNC
+        COUNT_FUNC
+        AVG_FUNC
+        SUM_FUNC
         SELECT
         DESC
         SHOW
@@ -520,8 +525,20 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
-    | MAX expression{
-      
+    | MAX_FUNC LBRACE expression RBRACE {
+      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::MAX_FUNC, $3);      
+    }
+    | MIN_FUNC LBRACE expression RBRACE {
+      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::MIN_FUNC, $3);      
+    }
+    | COUNT_FUNC LBRACE expression RBRACE {
+      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::COUNT_FUNC, $3);      
+    }
+    | AVG_FUNC LBRACE expression RBRACE{
+      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::AVG_FUNC, $3);
+    }
+    | SUM_FUNC LBRACE expression RBRACE {
+      $$ = new AggrFunctionExpr(AggrFunctionExpr::Type::SUM_FUNC, $3);      
     }
     ;
 
