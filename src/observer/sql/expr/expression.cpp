@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
 #include "common/lang/comparator.h"
+#include "expression.h"
 
 using namespace std;
 
@@ -334,4 +335,153 @@ RC ArithmeticExpr::try_get_value(Value &value) const
   }
 
   return calc_value(left_value, right_value, value);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+AggrFunctionExpr::AggrFunctionExpr(Type type, Expression *son) : func_type_(type), son_(son) { count_ = 0; }
+
+AggrFunctionExpr::AggrFunctionExpr(Type type, std::unique_ptr<Expression> son) : func_type_(type), son_(std::move(son))
+{
+  count_ = 0;
+}
+
+AttrType AggrFunctionExpr::value_type() const
+{
+  switch (func_type_) {
+  case Type::AVG_FUNC : {
+    return FLOATS;
+  } break;
+  case Type::COUNT_FUNC: {
+    return INTS;
+  }
+  case Type::MIN_FUNC:
+  case Type::MAX_FUNC:
+  case Type::SUM_FUNC: {
+    return son_->value_type();
+  }
+  default:
+    return UNDEFINED;
+    break;
+  }
+}
+
+RC AggrFunctionExpr::add_value(const Tuple &tuple)
+{
+  RC rc = RC::SUCCESS;
+  Value son_value;
+
+  rc = son_->get_value(tuple, son_value);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to get value of son expression. rc=%s", strrc(rc));
+    return rc;
+  }
+
+  if (son_value.is_null()) {
+    return RC::SUCCESS;
+  }
+  if (func_type_ == Type::COUNT_FUNC) {
+    count_++;
+    return RC::SUCCESS;
+  }
+
+  if (count_ == 0) {
+    sum_.set_value(son_value);
+    min_.set_value(son_value);
+    max_.set_value(son_value);
+  }
+  count_++;
+
+  switch (son_value.attr_type())
+  {
+  case INTS: {
+    sum_.set_int(sum_.get_int() + son_value.get_int());
+    min_.set_int(std::min(min_.get_int(), son_value.get_int()));
+    max_.set_int(std::max(max_.get_int(), son_value.get_int()));
+  } break;
+  case FLOATS: {
+    sum_.set_float(sum_.get_float() + son_value.get_float());
+    min_.set_float(std::min(min_.get_float(), son_value.get_float()));
+    max_.set_float(std::max(max_.get_float(), son_value.get_float()));
+  } break;
+  case CHARS: {
+    min_.set_string(std::min(min_.get_string(), son_value.get_string()).c_str());
+    max_.set_string(std::max(max_.get_string(), son_value.get_string()).c_str());
+  }
+  case DATES: {
+    sum_.set_int(sum_.get_int() + son_value.get_int());
+    if (min_.compare(son_value) > 0) {
+      min_.set_value(son_value);
+    }
+    if (max_.compare(son_value) < 0) {
+      max_.set_value(son_value);
+    }
+  }
+
+  default:
+    return RC::INTERNAL;
+  }
+  return rc;
+}
+
+RC AggrFunctionExpr::get_value(Value &value)
+{
+  if (count_ == 0 && func_type_ != Type::COUNT_FUNC) {
+    value.set_null();
+    return RC::SUCCESS;
+  }
+
+  switch (func_type_)
+  {
+  case Type::COUNT_FUNC: {
+    value.set_int(count_);
+  } break;
+
+  case Type::AVG_FUNC: {
+    if (sum_.attr_type() == INTS || sum_.attr_type() == DATES) {
+      value.set_float((float)sum_.get_int() / count_);
+    } else {
+      value.set_float(sum_.get_float() / count_);
+    }
+  } break;
+
+  case Type::SUM_FUNC: {
+    if (sum_.attr_type() == INTS || sum_.attr_type() == DATES) {
+      value.set_int(sum_.get_int());
+    } else {
+      value.set_float(sum_.get_float());
+    }
+  } break;
+
+  case Type::MIN_FUNC: {
+    value.set_value(min_);
+  } break;
+  case Type::MAX_FUNC: {
+    value.set_value(max_);
+  } break;
+
+  default:
+    return RC::INTERNAL;
+    break;
+  }
+  return RC::SUCCESS;
+}
+
+RC AggrFunctionExpr::try_get_value(Value &value) const
+{
+  Value son_value;
+  RC rc = son_->try_get_value(son_value);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+  if (func_type_ == Type::COUNT_FUNC) {
+    if (son_value.is_null()) {
+      value.set_int(0);
+    } else {
+      value.set_int(1);
+    }
+  } else {
+    value.set_value(son_value);
+  }
+  return RC::SUCCESS;
 }

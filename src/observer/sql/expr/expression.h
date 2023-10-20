@@ -43,6 +43,7 @@ enum class ExprType
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
+  AGGRFUNC,   ///< 聚合函数
 };
 
 /**
@@ -264,7 +265,7 @@ private:
  * @brief 算术表达式
  * @ingroup Expression
  */
-class ArithmeticExpr : public Expression 
+class ArithmeticExpr : public Expression
 {
 public:
   enum class Type {
@@ -299,4 +300,41 @@ private:
   Type arithmetic_type_;
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
+};
+
+class AggrFunctionExpr : public Expression
+{
+public:
+  enum class Type {
+    MAX_FUNC,
+    MIN_FUNC,
+    COUNT_FUNC,
+    AVG_FUNC,
+    SUM_FUNC,
+  };
+
+public:
+  AggrFunctionExpr(Type type, Expression *son);
+  AggrFunctionExpr(Type type, std::unique_ptr<Expression> son);
+
+  ExprType type() const override { return ExprType::AGGRFUNC; }
+  virtual ~AggrFunctionExpr() = default;
+
+  AttrType value_type() const override;
+
+  RC add_value(const Tuple &tuple);
+  RC get_value(Value &value);
+  RC try_get_value(Value &value) const override;
+
+  Type func_type() const { return func_type_; }
+
+  std::unique_ptr<Expression> &son() { return son_; }
+
+private:
+  Type func_type_;
+  std::unique_ptr<Expression> son_;
+  int count_;
+  Value sum_;
+  Value min_;
+  Value max_;
 };
