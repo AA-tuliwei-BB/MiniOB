@@ -307,6 +307,16 @@ public:
     return expressions_.size();
   }
 
+  RC cell_at(int index, const Tuple &tuple, Value& cell) const
+  {
+    if (index < 0 || index >= static_cast<int>(expressions_.size())) {
+      return RC::INTERNAL;
+    }
+
+    const Expression *expr = expressions_[index].get();
+    return expr->get_value(tuple, cell);
+  }
+
   RC cell_at(int index, Value &cell) const override
   {
     if (index < 0 || index >= static_cast<int>(expressions_.size())) {
@@ -314,7 +324,12 @@ public:
     }
 
     const Expression *expr = expressions_[index].get();
-    return expr->try_get_value(cell);
+    if (expr->type() == ExprType::AGGRFUNC) {
+      const AggrFunctionExpr *aggrfunc_expr = static_cast<const AggrFunctionExpr *>(expr);
+      return aggrfunc_expr->get_value(cell);
+    } else {
+      return expr->try_get_value(cell);
+    }
   }
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override
@@ -326,7 +341,6 @@ public:
     }
     return RC::NOTFOUND;
   }
-
 
 private:
   const std::vector<std::unique_ptr<Expression>> &expressions_;

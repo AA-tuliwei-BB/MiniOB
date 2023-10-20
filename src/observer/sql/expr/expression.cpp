@@ -433,7 +433,7 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
   return rc;
 }
 
-RC AggrFunctionExpr::get_value(Value &value)
+RC AggrFunctionExpr::get_value(Value &value) const
 {
   if (count_ == 0 && func_type_ != Type::COUNT_FUNC) {
     value.set_null();

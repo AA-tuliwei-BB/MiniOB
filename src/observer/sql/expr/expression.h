@@ -323,7 +323,7 @@ public:
   AttrType value_type() const override;
 
   RC add_value(const Tuple &tuple);
-  RC get_value(Value &value);
+  RC get_value(Value &value) const;
   RC try_get_value(Value &value) const override;
 
   Type func_type() const { return func_type_; }
