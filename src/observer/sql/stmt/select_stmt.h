@@ -57,7 +57,7 @@ public:
   {
     return alias_;
   }
-  const std::vector<std::unique_ptr<Expression>> &expression()
+  std::vector<std::unique_ptr<Expression>> &expression()
   {
     return expressions_;
   }
