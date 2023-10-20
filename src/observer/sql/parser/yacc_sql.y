@@ -86,6 +86,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         VALUES
         FROM
         WHERE
+        AS
         AND
         NOT
         SET
@@ -109,6 +110,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   Value *                           value;
   enum CompOp                       comp;
   RelAttrSqlNode *                  rel_attr;
+  char *                            alias_attr;
   std::vector<AttrInfoSqlNode> *    attr_infos;
   AttrInfoSqlNode *                 attr_info;
   Expression *                      expression;
@@ -139,6 +141,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_infos>          attr_def_list
 %type <number>              null_def
 %type <attr_info>           attr_def
+%type <string>              alias_attr
 %type <value_list>          value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
@@ -539,20 +542,32 @@ select_attr:
     ;
 
 rel_attr:
-    ID {
+    ID alias_attr{
       $$ = new RelAttrSqlNode;
       $$->attribute_name = $1;
+      if($2 != nullptr)
+        $$->alias_name = $2;
       free($1);
     }
-    | ID DOT ID {
+    | ID DOT ID alias_attr{
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
+      if($4 != nullptr)
+        $$->alias_name = $4;
       free($1);
       free($3);
     }
     ;
 
+alias_attr:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | AS ID{
+      $$ = $2;
+    }
 attr_list:
     /* empty */
     {

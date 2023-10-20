@@ -107,6 +107,7 @@ SELECT                                  RETURN_TOKEN(SELECT);
 CALC                                    RETURN_TOKEN(CALC);
 FROM                                    RETURN_TOKEN(FROM);
 WHERE                                   RETURN_TOKEN(WHERE);
+AS                                      RETURN_TOKEN(AS);
 LIKE                                    RETURN_TOKEN(LK);
 NULL                                    RETURN_TOKEN(NULL_VAL);
 AND                                     RETURN_TOKEN(AND);
