@@ -53,12 +53,27 @@ public:
   {
     return query_fields_;
   }
+  const std::vector<std::string> &alias() const
+  {
+    return alias_;
+  }
+  const std::vector<std::unique_ptr<Expression>> &expression() const
+  {
+    return expressions_;
+  }
   FilterStmt *filter_stmt() const
   {
     return filter_stmt_;
   }
+  bool is_aggregate() const
+  {
+    return is_aggregate_;
+  }
 
 private:
+  bool is_aggregate_;
+  std::vector<std::string> alias_;
+  std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   FilterStmt *filter_stmt_ = nullptr;
