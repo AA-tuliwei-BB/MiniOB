@@ -142,7 +142,7 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
     return RC::INTERNAL;
   }
   if (!nullable_value.isBool()) {
-    LOG_ERROR("Visible field is not a bool value. json value=%s", visible_value.toStyledString().c_str());
+    LOG_ERROR("Nullable field is not a bool value. json value=%s", nullable_value.toStyledString().c_str());
     return RC::INTERNAL;
   }
 

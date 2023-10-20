@@ -78,7 +78,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         STRING_T
         FLOAT_T
         DATE_T
-        NULL
+        NULL_VAL
         HELP
         EXIT
         DOT //QUOTE
@@ -137,7 +137,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <comp>                comp_op
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
-%type <bool>                null_def
+%type <number>              null_def
 %type <attr_info>           attr_def
 %type <value_list>          value_list
 %type <condition_list>      where
@@ -328,7 +328,7 @@ attr_def:
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
-      $$->nullable = $6;
+      $$->nullable = (bool)$6;
       free($1);
     }
     | ID type null_def
@@ -337,22 +337,22 @@ attr_def:
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = 4;
-      $$->nullable = $3;
+      $$->nullable = (bool)$3;
       free($1);
     }
     ;
 null_def:
     /* empty */
     {
-      $$ = true;
+      $$ = 0;
     }
-    | NOT NULL
+    | NOT NULL_VAL
     {
-      $$ = false;
+      $$ = 0;
     }
-    | NULL
+    | NULL_VAL
     {
-      $$ = true;
+      $$ = 1;
     }
 number:
     NUMBER {$$ = $1;}
@@ -411,8 +411,8 @@ value:
       $$ = new Value((date_t)$1);
       @$ = @1;
     }
-    |NULL {
-      $$ = new Value((null_t)$1);
+    |NULL_VAL {
+      $$ = new Value((null_t)0);
       @$ = @1;
     }
     ;
