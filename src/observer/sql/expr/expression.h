@@ -128,8 +128,22 @@ public:
 
   RC get_value(const Tuple &tuple, Value &value) const override;
 
+  void set_multi_table(bool multi_talbe) { multi_table_ = multi_talbe; }
+
+  std::string name() const
+  {
+    std::string field_name_ = table_name();
+    if (!multi_table_) {
+      std::string table_name_ = table_name();
+      return table_name_ + "." + field_name_;
+    } else {
+      return field_name_;
+    }
+  }
+
 private:
   Field field_;
+  bool multi_table_;
 };
 
 /**
@@ -155,6 +169,11 @@ public:
   void get_value(Value &value) const { value = value_; }
 
   const Value &get_value() const { return value_; }
+
+  std::string name() const
+  {
+    return value_.to_string();
+  }
 
 private:
   Value value_;
@@ -294,6 +313,32 @@ public:
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
 
+  std::string name() const
+  {
+    std::string left_name;
+    std::string right_name;
+    left_name = left_->name();
+    if (right_) right_name = right_->name();
+    switch (arithmetic_type_) {
+      case Type::ADD: {
+        return left_name + "+" + right_name;
+      } break;
+      case Type::SUB: {
+        return left_name + "-" + right_name;
+      } break;
+      case Type::MUL: {
+        return left_name + "*" + right_name;
+      } break;
+      case Type::DIV: {
+        return left_name + "/" + right_name;
+      } break;
+      case Type::NEGATIVE: {
+        return "-" + left_name;
+      }
+    }
+    return "error";
+  }
+
 private:
   RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;
   
@@ -331,6 +376,31 @@ public:
   Type func_type() const { return func_type_; }
 
   std::unique_ptr<Expression> &son() { return son_; }
+
+  std::string name() const
+  {
+    std::string son_name = son_->name();
+    std::string func_name;
+    switch (func_type_) {
+      case Type::AVG_FUNC: {
+        func_name = "avg";
+      } break;
+      case Type::COUNT_FUNC: {
+        func_name = "count";
+      } break;
+      case Type::MAX_FUNC: {
+        func_name = "avg";
+      } break;
+      case Type::MIN_FUNC: {
+        func_name = "avg";
+      } break;
+      case Type::SUM_FUNC: {
+        func_name = "avg";
+      } break;
+      default: break;
+    }
+    return func_name + "(" + son_name + ")";
+  }
 
 private:
   Type func_type_;

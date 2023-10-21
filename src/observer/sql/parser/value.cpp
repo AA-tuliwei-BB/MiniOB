@@ -200,6 +200,7 @@ std::string Value::to_string() const
         os << str_value_;
     } break;
     case NULLS: {
+        os << "null";
         break;
     }
     default: {
