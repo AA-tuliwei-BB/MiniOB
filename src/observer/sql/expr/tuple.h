@@ -302,11 +302,17 @@ public:
   {
   }
 
+  void set_child_tuple(Tuple* tuple)
+  {
+    this->child_tuple_ = tuple;
+  }
+
   int cell_num() const override
   {
     return expressions_.size();
   }
 
+/*
   RC cell_at(int index, const Tuple &tuple, Value& cell) const
   {
     if (index < 0 || index >= static_cast<int>(expressions_.size())) {
@@ -315,7 +321,7 @@ public:
 
     const Expression *expr = expressions_[index].get();
     return expr->get_value(tuple, cell);
-  }
+  }*/
 
   RC cell_at(int index, Value &cell) const override
   {
@@ -327,6 +333,8 @@ public:
     if (expr->type() == ExprType::AGGRFUNC) {
       const AggrFuncExpr *aggrfunc_expr = static_cast<const AggrFuncExpr *>(expr);
       return aggrfunc_expr->get_value(cell);
+    } else if (child_tuple_ != nullptr) {
+      return expr->get_value(*child_tuple_, cell);
     } else {
       return expr->try_get_value(cell);
     }
@@ -344,6 +352,7 @@ public:
 
 private:
   const std::vector<std::unique_ptr<Expression>> &expressions_;
+  Tuple *child_tuple_ = nullptr;
 };
 
 /**

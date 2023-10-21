@@ -33,10 +33,4 @@ public:
   }
 
 private:
-//! 投影映射的字段名称
-  //! 并不是所有的select都会查看表字段，也可能是常量数字、字符串，
-  //! 或者是执行某个函数。所以这里应该是表达式Expression。
-  //! 不过现在简单处理，就使用字段来描述
-  // std::vector<Expression> expressions_;
-  // 逻辑算子自带expressions
 };

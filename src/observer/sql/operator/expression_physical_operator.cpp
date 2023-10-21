@@ -38,7 +38,13 @@ RC ExpressionPhysicalOperator::next()
   if (children_.empty()) {
     return RC::RECORD_EOF;
   }
-  return children_[0]->next();
+  RC rc = children_[0]->next();
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+
+  tuple_.set_child_tuple(children_[0]->current_tuple());
+  return RC::SUCCESS;
 }
 
 RC ExpressionPhysicalOperator::close()
@@ -48,18 +54,9 @@ RC ExpressionPhysicalOperator::close()
   }
   return RC::SUCCESS;
 }
+
 Tuple *ExpressionPhysicalOperator::current_tuple()
 {
   // tuple_.set_tuple(children_[0]->current_tuple());
   return &tuple_;
 }
-
-/*
-void ExpressionPhysicalOperator::add_projection(const Table *table, const FieldMeta *field_meta)
-{
-  // 对单表来说，展示的(alias) 字段总是字段名称，
-  // 对多表查询来说，展示的alias 需要带表名字
-  TupleCellSpec *spec = new TupleCellSpec(table->name(), field_meta->name(), field_meta->name());
-  tuple_.add_cell_spec(spec);
-}
-*/
