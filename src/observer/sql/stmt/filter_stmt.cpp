@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/rc.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
+#include "common/lang/comparator.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
@@ -81,14 +82,6 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     const ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
   RC rc = RC::SUCCESS;
-  const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
-    0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 1, 1,
-    0, 1, 1, 0, 1, 1,
-    0, 0, 0, 1, 0, 1,
-    0, 1, 1, 0, 1, 1,
-    0, 1, 1, 1, 1, 1,
-  };
   int left_attr, right_attr;
 
   CompOp comp = condition.comp;

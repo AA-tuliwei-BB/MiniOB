@@ -15,6 +15,15 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 namespace common {
+const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
+    0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 0, 1, 1, 1,
+    0, 1, 1, 0, 1, 1, 1,
+    0, 0, 0, 1, 0, 1, 1,
+    0, 1, 1, 0, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1,
+};
 
 int compare_int(void* arg1, void* arg2);
 int compare_float(void* arg1, void* arg2);

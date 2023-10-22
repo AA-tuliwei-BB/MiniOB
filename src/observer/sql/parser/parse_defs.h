@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "sql/parser/value.h"
+#include "sql/expr/expression.h"
 
 class Expression;
 
@@ -80,16 +81,10 @@ struct RelAttrSqlNode : public ExprSqlNode
 
 struct ArithSqlNode : public ExprSqlNode
 {
-  enum class OperationType {
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    NEGATIVE,
-  };
+  
   std::unique_ptr<ExprSqlNode> left;
   std::unique_ptr<ExprSqlNode> right;
-  OperationType type;
+  ArithmeticExpr::Type operation_type;
   ExprSqlNode::Type get_type(){
      return ARITHMATIC_EXPR; 
   };
@@ -97,7 +92,7 @@ struct ArithSqlNode : public ExprSqlNode
 
 struct AggrSqlNode : public ExprSqlNode{
   std::unique_ptr<ExprSqlNode> son;
-  function_type type;
+  function_type func_type;
   ExprSqlNode::Type get_type(){
      return AGGR_FUNC_EXPR; 
   };
@@ -105,7 +100,7 @@ struct AggrSqlNode : public ExprSqlNode{
 
 struct FuncSqlNode : public ExprSqlNode{
   std::unique_ptr<ExprSqlNode> son;
-  function_type type;
+  function_type func_type;
   ExprSqlNode::Type get_type(){
      return FUNC_EXPR; 
   };

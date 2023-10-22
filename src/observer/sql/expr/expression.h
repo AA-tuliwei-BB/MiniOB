@@ -180,6 +180,20 @@ private:
 };
 
 /**
+ * @brief 星号表达式
+ * @ingroup Expression
+ */
+class StarExpr : public Expression {
+public:
+  StarExpr() {name_ = "*"; };
+  ~StarExpr() = default;
+  RC get_value(const Tuple &tuple, Value &value) {return RC::UNIMPLENMENT; }
+  ExprType type() const { return ExprType::STAR; }
+  AttrType value_type() const {return AttrType::UNDEFINED; };
+
+};
+
+/**
  * @brief 类型转换表达式
  * @ingroup Expression
  */
@@ -389,13 +403,13 @@ public:
         func_name = "count";
       } break;
       case Type::MAX_FUNC: {
-        func_name = "avg";
+        func_name = "max";
       } break;
       case Type::MIN_FUNC: {
-        func_name = "avg";
+        func_name = "min";
       } break;
       case Type::SUM_FUNC: {
-        func_name = "avg";
+        func_name = "sum";
       } break;
       default: break;
     }
