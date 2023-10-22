@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <sstream>
 #include <limits>
+#include "storage/table/table_meta.h"
 #include "storage/buffer/disk_buffer_pool.h"
 #include "storage/trx/latch_memo.h"
 #include "storage/record/record.h"
@@ -62,11 +63,42 @@ class Table;
  */
 struct PageHeader
 {
-  int32_t record_num;           ///< 当前页面记录的个数
-  int32_t record_real_size;     ///< 每条记录的实际大小
-  int32_t record_size;          ///< 每条记录占用实际空间大小(可能对齐)
-  int32_t record_capacity;      ///< 最大记录个数
-  int32_t first_record_offset;  ///< 第一条记录的偏移量
+  int32_t number;               ///< 已有的记录量
+  int32_t tail;                 ///< 当前页面已经使用到的偏移位置
+  // 在页尾倒序添加每条记录的位置
+};
+
+struct OverFlowData 
+{
+  RID rid;
+  int len;
+  const char *data;
+  OverFlowData() {}
+  OverFlowData(int len_, const char *data_, const RID *rid_ = RID::min()) {
+    len = len_;
+    data = data_;
+    rid = *rid_;
+  }
+};
+
+struct ExtraRecord
+{
+  RID            rid;
+  int            length_size;          // 变长字段数量
+  vector<int>    length;               // 变长字段长度
+  bool           overflow_flag;        // 是否溢出（超过一页）
+  int            null_size;            // 可空字段数量
+  common::Bitmap null_map;
+  vector<bool>   null;                // 可空字段是否为空
+  const char    *data;                // 数据
+
+  int                  len;       // 实际大小（不包含溢出数据）
+  int                  data_len;  // 数据的长度
+  vector<OverFlowData> overflow_data;
+
+  int data_start_offset() const;
+
+  RC from_record(const Record &record, const TableMeta &table_meta);
 };
 
 /**
@@ -83,9 +115,9 @@ public:
    * @brief 初始化一个迭代器
    *
    * @param record_page_handler 负责某个页面上记录增删改查的对象
-   * @param start_slot_num      从哪个记录开始扫描，默认是0
+   * @param start_num      从哪个记录开始扫描，默认是1(起始为1)
    */
-  void init(RecordPageHandler &record_page_handler, SlotNum start_slot_num = 0);
+  void init(RecordPageHandler &record_page_handler, int32_t start_num = 1);
 
   /**
    * @brief 判断是否有下一个记录
@@ -97,7 +129,7 @@ public:
    * 
    * @param record 返回的下一个记录
    */
-  RC   next(Record &record);
+  RC   next(ExtraRecord &record);
 
   /**
    * 该迭代器是否有效
@@ -107,8 +139,8 @@ public:
 private:
   RecordPageHandler *record_page_handler_ = nullptr;
   PageNum            page_num_            = BP_INVALID_PAGE_NUM;
-  common::Bitmap     bitmap_;             ///< bitmap 的相关信息可以参考 RecordPageHandler 的说明
-  SlotNum            next_slot_num_ = 0;  ///< 当前遍历到了哪一个slot
+  int32_t            next_num_            = 1;  ///< 当前遍历到了哪一个record
+  int32_t            record_num_          = -1;
 };
 
 /**
@@ -161,18 +193,28 @@ public:
   /**
    * @brief 插入一条记录
    *
-   * @param data 要插入的记录
+   * @param record 要插入的记录
    * @param rid  如果插入成功，通过这个参数返回插入的位置
    */
-  RC insert_record(const char *data, RID *rid);
+  RC insert_record(const ExtraRecord &record, RID *rid);
+
+  /**
+   * @brief 插入一条OverflowData
+   *
+   * @param data 要插入的数据
+   * @param rid  如果插入成功，通过这个参数返回插入的位置
+   */
+  RC insert_data(const OverFlowData &data, RID *rid, RID *next = nullptr);
 
   /**
    * @brief 数据库恢复时，在指定位置插入数据
-   * 
-   * @param data 要插入的数据行
+   *
+   * @param record 要插入的记录
    * @param rid  插入的位置
    */
-  RC recover_insert_record(const char *data, const RID &rid);
+  RC recover_insert_record(const ExtraRecord &record, const RID &rid);
+
+  // MYTODO recover_insert_data
 
   /**
    * @brief 删除指定的记录
@@ -187,7 +229,15 @@ public:
    * @param rid 指定的位置
    * @param rec 返回指定的数据。这里不会将数据复制出来，而是使用指针，所以调用者必须保证数据使用期间受到保护
    */
-  RC get_record(const RID *rid, Record *rec);
+  RC get_record(const RID *rid, ExtraRecord *rec);
+
+  /**
+   * @brief 获取指定位置的记录数据
+   *
+   * @param rid 指定的位置
+   * @param data 返回指定的数据。这里不会将数据复制出来，而是使用指针，所以调用者必须保证数据使用期间受到保护
+   */
+  RC get_data(const RID *rid, OverFlowData *data);
 
   /**
    * @brief 返回该记录页的页号
@@ -195,42 +245,40 @@ public:
   PageNum get_page_num() const;
 
   /**
-   * @brief 当前页面是否已经没有空闲位置插入新的记录
-   */
-  bool is_full() const;
+   * @brief 返回该页面还有多少可用空间
+  */
+  int32_t free_space() const;
+
+  /**
+   * 返回页尾的record列表(倒序)
+  */
+  int32_t *get_list();
+
+  /**
+   * 返回页尾record列表的第pos个元素
+  */
+  int32_t* get_list(int32_t pos);
+
+  int32_t get_list_next(int32_t current);
 
 protected:
-  /**
-   * @details 
-   * 前面在计算record_capacity时并没有考虑对齐，但第一个record需要8字节对齐
-   * 因此按此前计算的record_capacity，最后一个记录的部分数据可能会被挤出页面
-   * 所以需要对record_capacity进行修正，保证记录不会溢出
-   */
-  void fix_record_capacity() {
-    int32_t last_record_offset = page_header_->first_record_offset + 
-                                 page_header_->record_capacity * page_header_->record_size;
-    while(last_record_offset > BP_PAGE_DATA_SIZE) {
-      page_header_->record_capacity -= 1;
-      last_record_offset -= page_header_->record_size;
-    }
-  }
 
   /**
-   * @brief 获取指定槽位的记录数据
+   * @brief 获取指定偏移的记录数据
    * 
-   * @param 指定的记录槽位
+   * @param 指定的记录偏移
    */
-  char *get_record_data(SlotNum slot_num)
+  char *get_record_data(OffsetNum offset)
   {
-    return frame_->data() + page_header_->first_record_offset + (page_header_->record_size * slot_num);
+    return frame_->data() + offset;
   }
 
 protected:
   DiskBufferPool *disk_buffer_pool_ = nullptr;  ///< 当前操作的buffer pool(文件)
+  TableMeta      *talbe_meta_       = nullptr;
   Frame          *frame_            = nullptr;  ///< 当前操作页面关联的frame(frame的更多概念可以参考buffer pool和frame)
   bool            readonly_         = false;    ///< 当前的操作是否都是只读的
   PageHeader     *page_header_      = nullptr;  ///< 当前页面上页面头
-  char           *bitmap_           = nullptr;  ///< 当前页面上record分配状态信息bitmap内存起始位置
 
 private:
   friend class RecordPageIterator;

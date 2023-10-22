@@ -36,6 +36,7 @@ public:
 
   void swap(TableMeta &other) noexcept;
 
+  // MYTODO
   RC init(int32_t table_id, const char *name, int field_num, const AttrInfoSqlNode attributes[]);
 
   RC add_index(const IndexMeta &index);
@@ -76,5 +77,7 @@ protected:
   std::vector<FieldMeta> fields_;  // 包含sys_fields
   std::vector<IndexMeta> indexes_;
 
+  int variable_length_count_ = 0;
+  int nullable_count = 0;
   int record_size_ = 0;
 };

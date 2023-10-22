@@ -34,19 +34,20 @@ class Field;
 struct RID
 {
   PageNum page_num;  // record's page number
-  SlotNum slot_num;  // record's slot number
+  // SlotNum slot_num;  // record's slot number
+  OffsetNum offset; // offset in the page
 
   RID() = default;
-  RID(const PageNum _page_num, const SlotNum _slot_num) : page_num(_page_num), slot_num(_slot_num) {}
+  RID(const PageNum _page_num, const OffsetNum _offset) : page_num(_page_num), offset(_offset) {}
 
   const std::string to_string() const
   {
     std::stringstream ss;
-    ss << "PageNum:" << page_num << ", SlotNum:" << slot_num;
+    ss << "PageNum:" << page_num << ", Offset:" << offset;
     return ss.str();
   }
 
-  bool operator==(const RID &other) const { return page_num == other.page_num && slot_num == other.slot_num; }
+  bool operator==(const RID &other) const { return page_num == other.page_num && offset == other.offset; }
 
   bool operator!=(const RID &other) const { return !(*this == other); }
 
@@ -56,13 +57,13 @@ struct RID
     if (page_diff != 0) {
       return page_diff;
     } else {
-      return rid1->slot_num - rid2->slot_num;
+      return rid1->offset - rid2->offset ;
     }
   }
 
   /**
    * 返回一个不可能出现的最小的RID
-   * 虽然page num 0和slot num 0都是合法的，但是page num 0通常用于存放meta数据，所以对数据部分来说都是
+   * 虽然page num 0和offset 0都是合法的，但是page num 0通常用于存放meta数据，所以对数据部分来说都是
    * 不合法的. 这里在bplus tree中查找时会用到。
    */
   static RID *min()
@@ -73,11 +74,11 @@ struct RID
 
   /**
    * @brief 返回一个“最大的”RID
-   * 我们假设page num和slot num都不会使用对应数值类型的最大值
+   * 我们假设page num和offset都不会使用对应数值类型的最大值
    */
   static RID *max()
   {
-    static RID rid{std::numeric_limits<PageNum>::max(), std::numeric_limits<SlotNum>::max()};
+    static RID rid{std::numeric_limits<PageNum>::max(), std::numeric_limits<OffsetNum>::max()};
     return &rid;
   }
 };
@@ -102,10 +103,12 @@ public:
 
   Record(const Record &other)
   {
-    rid_   = other.rid_;
-    data_  = other.data_;
-    len_   = other.len_;
-    owner_ = other.owner_;
+    rid_     = other.rid_;
+    data_    = other.data_;
+    len_     = other.len_;
+    owner_   = other.owner_;
+    null_    = other.null_;
+    offset_  = other.offset_;
 
     if (other.owner_) {
       char *tmp = (char *)malloc(other.len_);
@@ -141,15 +144,28 @@ public:
     this->owner_ = true;
   }
 
+  bool is_null(int field_id) const
+  {
+    return null_[field_id];
+  }
+
+  char *get_field_date(int field_id)
+  {
+    return data_ + offset_[field_id];
+  }
+
+  const vector<int> & offset() const { return offset_; }
+  const vector<bool> & null() const { return null_; }
+
   char       *data() { return this->data_; }
   const char *data() const { return this->data_; }
   int         len() const { return this->len_; }
 
   void set_rid(const RID &rid) { this->rid_ = rid; }
-  void set_rid(const PageNum page_num, const SlotNum slot_num)
+  void set_rid(const PageNum page_num, const OffsetNum offset)
   {
     this->rid_.page_num = page_num;
-    this->rid_.slot_num = slot_num;
+    this->rid_.offset = offset;
   }
   RID       &rid() { return rid_; }
   const RID &rid() const { return rid_; }
@@ -157,7 +173,9 @@ public:
 private:
   RID rid_;
 
-  char *data_  = nullptr;
-  int   len_   = 0;       /// 如果不是record自己来管理内存，这个字段可能是无效的
-  bool  owner_ = false;   /// 表示当前是否由record来管理内存
+  char        *data_    = nullptr;
+  int          len_     = 0;      /// 如果不是record自己来管理内存，这个字段可能是无效的
+  bool         owner_   = false;  /// 表示当前是否由record来管理内存
+  vector<bool> null_;             /// 字段是否为空
+  vector<int>  offset_;           /// 字段偏移量，最后一个为边界
 };

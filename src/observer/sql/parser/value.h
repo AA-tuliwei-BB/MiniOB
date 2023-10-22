@@ -26,13 +26,16 @@ enum AttrType {
     INTS, ///< 整数类型(4字节)
     DATES, ///< 日期类型(4字节)
     FLOATS, ///< 浮点数类型(4字节)
+    NULLS, ///< 空类型(4字节)
     BOOLEANS, ///< boolean类型，当前不是由parser解析出来的，是程序内部使用的
-    NULLS,
+    TEXTS,
 };
 
 typedef struct{
     int date_hash;
 }date_t;
+
+typedef uint32_t null_t;
 
 const char* attr_type_to_string(AttrType type);
 AttrType attr_type_from_string(const char* s);
@@ -54,6 +57,7 @@ public:
     explicit Value(int val);
     explicit Value(float val);
     explicit Value(date_t val);
+    explicit Value(null_t val);
     explicit Value(bool val);
     explicit Value(const char* s, int len = 0);
 
@@ -111,6 +115,7 @@ private:
         int int_value_;
         float float_value_;
         date_t date_value_;
+        null_t null_value_;
         bool bool_value_;
     } num_value_;
     std::string str_value_;

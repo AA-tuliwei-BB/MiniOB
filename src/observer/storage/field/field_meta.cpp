@@ -22,37 +22,35 @@ See the Mulan PSL v2 for more details. */
 
 const static Json::StaticString FIELD_NAME("name");
 const static Json::StaticString FIELD_TYPE("type");
-const static Json::StaticString FIELD_OFFSET("offset");
 const static Json::StaticString FIELD_LEN("len");
 const static Json::StaticString FIELD_VISIBLE("visible");
 const static Json::StaticString FIELD_NULLABLE("nullable");
 
-FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_offset_(-1), attr_len_(0), visible_(false)
+FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_len_(0), visible_(false)
 {}
 
-FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible, bool nullable)
+FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable)
 {
-  [[maybe_unused]] RC rc = this->init(name, attr_type, attr_offset, attr_len, visible, nullable);
+  [[maybe_unused]] RC rc = this->init(name, attr_type, attr_len, visible, nullable);
   ASSERT(rc == RC::SUCCESS, "failed to init field meta. rc=%s", strrc(rc));
 }
 
-RC FieldMeta::init(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible, bool nullable)
+RC FieldMeta::init(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable)
 {
   if (common::is_blank(name)) {
     LOG_WARN("Name cannot be empty");
     return RC::INVALID_ARGUMENT;
   }
 
-  if (AttrType::UNDEFINED == attr_type || attr_offset < 0 || attr_len <= 0) {
+  if (AttrType::UNDEFINED == attr_type || attr_len <= 0) {
     LOG_WARN(
-        "Invalid argument. name=%s, attr_type=%d, attr_offset=%d, attr_len=%d", name, attr_type, attr_offset, attr_len);
+        "Invalid argument. name=%s, attr_type=%d, attr_len=%d", name, attr_type, attr_len);
     return RC::INVALID_ARGUMENT;
   }
 
   name_ = name;
   attr_type_ = attr_type;
   attr_len_ = attr_len;
-  attr_offset_ = attr_offset;
   visible_ = visible;
   nullable_ = nullable;
 
@@ -68,11 +66,6 @@ const char *FieldMeta::name() const
 AttrType FieldMeta::type() const
 {
   return attr_type_;
-}
-
-int FieldMeta::offset() const
-{
-  return attr_offset_;
 }
 
 int FieldMeta::len() const
@@ -100,7 +93,6 @@ void FieldMeta::to_json(Json::Value &json_value) const
 {
   json_value[FIELD_NAME] = name_;
   json_value[FIELD_TYPE] = attr_type_to_string(attr_type_);
-  json_value[FIELD_OFFSET] = attr_offset_;
   json_value[FIELD_LEN] = attr_len_;
   json_value[FIELD_VISIBLE] = visible_;
   json_value[FIELD_NULLABLE] = nullable_;
@@ -115,7 +107,6 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
 
   const Json::Value &name_value = json_value[FIELD_NAME];
   const Json::Value &type_value = json_value[FIELD_TYPE];
-  const Json::Value &offset_value = json_value[FIELD_OFFSET];
   const Json::Value &len_value = json_value[FIELD_LEN];
   const Json::Value &visible_value = json_value[FIELD_VISIBLE];
   const Json::Value &nullable_value = json_value[FIELD_NULLABLE];
@@ -129,10 +120,6 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
     return RC::INTERNAL;
   }
 
-  if (!offset_value.isInt()) {
-    LOG_ERROR("Offset is not an integer. json value=%s", offset_value.toStyledString().c_str());
-    return RC::INTERNAL;
-  }
   if (!len_value.isInt()) {
     LOG_ERROR("Len is not an integer. json value=%s", len_value.toStyledString().c_str());
     return RC::INTERNAL;
@@ -142,7 +129,7 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
     return RC::INTERNAL;
   }
   if (!nullable_value.isBool()) {
-    LOG_ERROR("Visible field is not a bool value. json value=%s", visible_value.toStyledString().c_str());
+    LOG_ERROR("Nullable field is not a bool value. json value=%s", nullable_value.toStyledString().c_str());
     return RC::INTERNAL;
   }
 
@@ -153,9 +140,8 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
   }
 
   const char *name = name_value.asCString();
-  int offset = offset_value.asInt();
   int len = len_value.asInt();
   bool visible = visible_value.asBool();
   bool nullable = nullable_value.asBool();
-  return field.init(name, type, offset, len, visible, nullable);
+  return field.init(name, type, len, visible, nullable);
 }
