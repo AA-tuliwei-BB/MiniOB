@@ -157,6 +157,9 @@ public:
   const vector<int> & offset() const { return offset_; }
   const vector<bool> & null() const { return null_; }
 
+  vector<int> & offset() { return offset_; }
+  vector<bool> & null() { return null_; }
+
   char       *data() { return this->data_; }
   const char *data() const { return this->data_; }
   int         len() const { return this->len_; }

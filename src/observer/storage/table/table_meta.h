@@ -64,6 +64,12 @@ public:
 
   int record_size() const;
 
+  int variable_length_count() const { return variable_length_count_; }
+
+  int nullable_count() const { return nullable_count_; }
+
+  int min_size() const { return align8(variable_length_count_ * sizeof(int) + 1 + (nullable_count_ + 7) / 8) + sizeof(RID); }
+
 public:
   int serialize(std::ostream &os) const override;
   int deserialize(std::istream &is) override;
@@ -78,6 +84,6 @@ protected:
   std::vector<IndexMeta> indexes_;
 
   int variable_length_count_ = 0;
-  int nullable_count = 0;
+  int nullable_count_ = 0;
   int record_size_ = 0;
 };

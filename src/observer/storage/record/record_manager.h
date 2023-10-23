@@ -71,6 +71,7 @@ struct PageHeader
 struct OverFlowData 
 {
   RID rid;
+  RID next;
   int len;
   const char *data;
   OverFlowData() {}
@@ -88,9 +89,8 @@ struct ExtraRecord
   vector<int>    length;               // 变长字段长度
   bool           overflow_flag;        // 是否溢出（超过一页）
   int            null_size;            // 可空字段数量
-  common::Bitmap null_map;
   vector<bool>   null;                // 可空字段是否为空
-  const char    *data;                // 数据
+  const char          *data;                // 数据
 
   int                  len;       // 实际大小（不包含溢出数据）
   int                  data_len;  // 数据的长度
@@ -99,6 +99,8 @@ struct ExtraRecord
   int data_start_offset() const;
 
   RC from_record(const Record &record, const TableMeta &table_meta);
+
+  RC to_record(DiskBufferPool *disk_buffer_pool_, const TableMeta *table_meta_, bool readonly, Record *rec);
 };
 
 /**
@@ -166,7 +168,7 @@ public:
    * @param page_num    当前处理哪个页面
    * @param readonly    是否只读。在访问页面时，需要对页面加锁
    */
-  RC init(DiskBufferPool &buffer_pool, PageNum page_num, bool readonly);
+  RC init(DiskBufferPool &buffer_pool, PageNum page_num, const TableMeta *table_meta, bool readonly);
 
   /**
    * @brief 数据库恢复时，与普通的运行场景有所不同，不做任何并发操作，也不需要加锁
@@ -183,7 +185,7 @@ public:
    * @param page_num    当前处理哪个页面
    * @param record_size 每个记录的大小
    */
-  RC init_empty_page(DiskBufferPool &buffer_pool, PageNum page_num, int record_size);
+  RC init_empty_page(DiskBufferPool &buffer_pool, PageNum page_num, const TableMeta *table_meta);
 
   /**
    * @brief 操作结束后做的清理工作，比如释放页面、解锁
@@ -261,6 +263,8 @@ public:
 
   int32_t get_list_next(int32_t current);
 
+  bool is_full();
+
 protected:
 
   /**
@@ -274,11 +278,11 @@ protected:
   }
 
 protected:
-  DiskBufferPool *disk_buffer_pool_ = nullptr;  ///< 当前操作的buffer pool(文件)
-  TableMeta      *talbe_meta_       = nullptr;
-  Frame          *frame_            = nullptr;  ///< 当前操作页面关联的frame(frame的更多概念可以参考buffer pool和frame)
-  bool            readonly_         = false;    ///< 当前的操作是否都是只读的
-  PageHeader     *page_header_      = nullptr;  ///< 当前页面上页面头
+  DiskBufferPool  *disk_buffer_pool_ = nullptr;  ///< 当前操作的buffer pool(文件)
+  const TableMeta *table_meta_       = nullptr;
+  Frame *frame_ = nullptr;  ///< 当前操作页面关联的frame(frame的更多概念可以参考buffer pool和frame)
+  bool   readonly_         = false;    ///< 当前的操作是否都是只读的
+  PageHeader *page_header_ = nullptr;  ///< 当前页面上页面头
 
 private:
   friend class RecordPageIterator;
@@ -300,7 +304,7 @@ public:
    *
    * @param buffer_pool 当前操作的是哪个文件
    */
-  RC init(DiskBufferPool *buffer_pool);
+  RC init(DiskBufferPool *buffer_pool, const TableMeta *table_meta);
 
   /**
    * @brief 关闭，做一些资源清理的工作
@@ -317,35 +321,35 @@ public:
   /**
    * @brief 插入一个新的记录到指定文件中，并返回该记录的标识符
    * 
-   * @param data        纪录内容
+   * @param record      纪录内容
    * @param record_size 记录大小
    * @param rid         返回该记录的标识符
    */
-  RC insert_record(const char *data, int record_size, RID *rid);
+  RC insert_record(const Record &record, int record_size, RID *rid);
 
    /**
-   * @brief 数据库恢复时，在指定文件指定位置插入数据
+   * @brief 数据库恢复时，在指定文件指定位置插入数据（暂时封存，要用再写）
    * 
-   * @param data        记录内容
+   * @param record 记录内容
    * @param record_size 记录大小
    * @param rid         要插入记录的指定标识符
    */
-  RC recover_insert_record(const char *data, int record_size, const RID &rid);
+  // RC recover_insert_record(const Record &record, int record_size, const RID &rid);
 
   /**
    * @brief 获取指定文件中标识符为rid的记录内容到rec指向的记录结构中
    * @param page_handler[in]
    * 访问记录时，会拿住一些资源不释放，比如页面锁，使用这个对象保存相关的资源，并在析构时会自动释放
    * @param rid 想要获取的记录ID
-   * @param readonly 获取的记录是只读的还是需要修改的
    * @param rec[out] 通过这个参数返回获取到的记录
-   * @note rec 参数返回的记录并不会复制数据内存。page_handler 对象会拿着相关的资源，比如 pin 住页面和加上页面锁。
+   * @note 如果不溢出，rec 参数返回的记录并不会复制数据内存。page_handler 对象会拿着相关的资源，比如 pin 住页面和加上页面锁。
    *       如果page_handler 释放了，那也不能再访问rec对象了。
+   *       如果溢出了，会直接复制内存，此时如果对其修改，不会被记录。因此，不要对rec进行修改！
    */
   RC get_record(RecordPageHandler &page_handler, const RID *rid, bool readonly, Record *rec);
 
   /**
-   * @brief 与get_record类似，访问某个记录，并提供回调函数来操作相应的记录
+   * @brief 与get_record类似，访问某个记录，并提供回调函数来操作相应的记录，不要对可能溢出的record进行visit!
    *
    * @param rid 想要访问的记录ID
    * @param readonly 是否会修改记录
@@ -353,13 +357,25 @@ public:
    */
   RC visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor);
 
+  /**
+   * @brief 与get_record类似，访问某个记录，并提供回调函数来操作相应的记录，不要对可能溢出的record进行visit!
+   *
+   * @param rid 想要访问的记录ID
+   * @param field_id 想要访问的字段的编号，不可以修改变长字段！变长字段需要删除并重新插入
+   * @param updater 修改记录的回调函数
+   */
+  RC update_record_field(const RID &rid, FieldMeta *field, std::function<void(char *)> updater);
+
 private:
   /**
    * @brief 初始化当前没有填满记录的页面，初始化free_pages_成员
    */
   RC init_free_pages();
 
+  RC get_new_page(RecordPageHandler &record_page_handler, PageNum &current_page_num);
+
 private:
+  const TableMeta            *table_meta_       = nullptr;
   DiskBufferPool             *disk_buffer_pool_ = nullptr;
   std::unordered_set<PageNum> free_pages_;  ///< 没有填充满的页面集合
   common::Mutex               lock_;        ///< 当编译时增加-DCONCURRENCY=ON 选项时，才会真正的支持并发
@@ -429,5 +445,6 @@ private:
   ConditionFilter   *condition_filter_ = nullptr;  ///< 过滤record
   RecordPageHandler  record_page_handler_;         ///< 处理文件某页面的记录
   RecordPageIterator record_page_iterator_;        ///< 遍历某个页面上的所有record
+  ExtraRecord        next_extra_record_;
   Record             next_record_;                 ///< 获取的记录放在这里缓存起来
 };

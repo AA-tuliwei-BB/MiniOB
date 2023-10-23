@@ -82,8 +82,8 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
       LOG_WARN("No such field in condition. %s.%s", table.name(), condition.left_attr.attribute_name.c_str());
       return RC::SCHEMA_FIELD_MISSING;
     }
-    left.attr_length = field_left->len();
-    left.attr_offset = field_left->offset();
+    //left.attr_length = field_left->len();
+    //left.attr_offset = field_left->offset();
 
     type_left = field_left->type();
   } else {
@@ -102,8 +102,8 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
       LOG_WARN("No such field in condition. %s.%s", table.name(), condition.right_attr.attribute_name.c_str());
       return RC::SCHEMA_FIELD_MISSING;
     }
-    right.attr_length = field_right->len();
-    right.attr_offset = field_right->offset();
+    //right.attr_length = field_right->len();
+    //right.attr_offset = field_right->offset();
     type_right = field_right->type();
   } else {
     right.is_attr = false;
