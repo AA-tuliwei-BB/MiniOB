@@ -23,19 +23,20 @@ See the Mulan PSL v2 for more details. */
 const static Json::StaticString FIELD_NAME("name");
 const static Json::StaticString FIELD_TYPE("type");
 const static Json::StaticString FIELD_LEN("len");
+const static Json::StaticString FIELD_ID("id");
 const static Json::StaticString FIELD_VISIBLE("visible");
 const static Json::StaticString FIELD_NULLABLE("nullable");
 
 FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_len_(0), visible_(false)
 {}
 
-FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable)
+FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_len, int id, bool visible, bool nullable)
 {
-  [[maybe_unused]] RC rc = this->init(name, attr_type, attr_len, visible, nullable);
+  [[maybe_unused]] RC rc = this->init(name, attr_type, attr_len, id, visible, nullable);
   ASSERT(rc == RC::SUCCESS, "failed to init field meta. rc=%s", strrc(rc));
 }
 
-RC FieldMeta::init(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable)
+RC FieldMeta::init(const char *name, AttrType attr_type, int attr_len, int id, bool visible, bool nullable)
 {
   if (common::is_blank(name)) {
     LOG_WARN("Name cannot be empty");
@@ -48,11 +49,12 @@ RC FieldMeta::init(const char *name, AttrType attr_type, int attr_len, bool visi
     return RC::INVALID_ARGUMENT;
   }
 
-  name_ = name;
+  name_      = name;
   attr_type_ = attr_type;
-  attr_len_ = attr_len;
-  visible_ = visible;
-  nullable_ = nullable;
+  attr_len_  = attr_len;
+  id_        = id;
+  visible_   = visible;
+  nullable_  = nullable;
 
   LOG_INFO("Init a field with name=%s", name);
   return RC::SUCCESS;
@@ -83,9 +85,11 @@ bool FieldMeta::nullable() const
   return nullable_;
 }
 
+int FieldMeta::id() const { id_; }
+
 void FieldMeta::desc(std::ostream &os) const
 {
-  os << "field name=" << name_ << ", type=" << attr_type_to_string(attr_type_) << ", len=" << attr_len_
+  os << "field name=" << name_ << ", type=" << attr_type_to_string(attr_type_) << ", len=" << attr_len_ << ", id=" << id_
      << ", visible=" << (visible_ ? "yes" : "no") << ", nullable=" << (nullable_ ? "yes" : "no");
 }
 
@@ -94,6 +98,7 @@ void FieldMeta::to_json(Json::Value &json_value) const
   json_value[FIELD_NAME] = name_;
   json_value[FIELD_TYPE] = attr_type_to_string(attr_type_);
   json_value[FIELD_LEN] = attr_len_;
+  json_value[FIELD_ID] = id_;
   json_value[FIELD_VISIBLE] = visible_;
   json_value[FIELD_NULLABLE] = nullable_;
 }
@@ -108,6 +113,7 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
   const Json::Value &name_value = json_value[FIELD_NAME];
   const Json::Value &type_value = json_value[FIELD_TYPE];
   const Json::Value &len_value = json_value[FIELD_LEN];
+  const Json::Value &id_value = json_value[FIELD_LEN];
   const Json::Value &visible_value = json_value[FIELD_VISIBLE];
   const Json::Value &nullable_value = json_value[FIELD_NULLABLE];
 
@@ -122,6 +128,11 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
 
   if (!len_value.isInt()) {
     LOG_ERROR("Len is not an integer. json value=%s", len_value.toStyledString().c_str());
+    return RC::INTERNAL;
+  }
+
+  if (!id_value.isInt()) {
+    LOG_ERROR("Id is not an integer. json value=%s", id_value.toStyledString().c_str());
     return RC::INTERNAL;
   }
   if (!visible_value.isBool()) {
@@ -141,7 +152,8 @@ RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
 
   const char *name = name_value.asCString();
   int len = len_value.asInt();
+  int id = id_value.asInt();
   bool visible = visible_value.asBool();
   bool nullable = nullable_value.asBool();
-  return field.init(name, type, len, visible, nullable);
+  return field.init(name, type, len, id, visible, nullable);
 }

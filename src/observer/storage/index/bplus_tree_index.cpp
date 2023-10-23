@@ -87,14 +87,14 @@ RC BplusTreeIndex::close()
   return RC::SUCCESS;
 }
 
-RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
+RC BplusTreeIndex::insert_entry(const Record &record, const RID *rid)
 {
-  return index_handler_.insert_entry(record + field_meta_.offset(), rid);
+  return index_handler_.insert_entry(record.data() + record.offset()[field_meta_.id()], rid);
 }
 
-RC BplusTreeIndex::delete_entry(const char *record, const RID *rid)
+RC BplusTreeIndex::delete_entry(const Record &record, const RID *rid)
 {
-  return index_handler_.delete_entry(record + field_meta_.offset(), rid);
+  return index_handler_.delete_entry(record.data() + record.offset()[field_meta_.id()], rid);
 }
 
 IndexScanner *BplusTreeIndex::create_scanner(

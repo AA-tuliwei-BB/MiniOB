@@ -233,15 +233,15 @@ RC Table::open(const char *meta_file, const char *base_dir)
 RC Table::insert_record(Record &record)
 {
   RC rc = RC::SUCCESS;
-  rc = record_handler_->insert_record(record.data(), table_meta_.record_size(), &record.rid());
+  rc = record_handler_->insert_record(record, table_meta_.record_size(), &record.rid());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Insert record failed. table name=%s, rc=%s", table_meta_.name(), strrc(rc));
     return rc;
   }
 
-  rc = insert_entry_of_indexes(record.data(), record.rid());
+  rc = insert_entry_of_indexes(record, record.rid());
   if (rc != RC::SUCCESS) { // 可能出现了键值重复
-    RC rc2 = delete_entry_of_indexes(record.data(), record.rid(), false/*error_on_not_exists*/);
+    RC rc2 = delete_entry_of_indexes(record, record.rid(), false/*error_on_not_exists*/);
     if (rc2 != RC::SUCCESS) {
       LOG_ERROR("Failed to rollback index data when insert index entries failed. table name=%s, rc=%d:%s",
                 name(), rc2, strrc(rc2));
@@ -263,7 +263,7 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
   for (auto index : this->indexes_) {
     for (std::string field_name : fields) {
       if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->delete_entry(before.data(), &rid);
+        index->delete_entry(before, &rid);
         break;
       }
     }
@@ -282,7 +282,7 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
   for (auto index : this->indexes_) {
     for (std::string field_name : fields) {
       if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->insert_entry(after.data(), &rid);
+        index->insert_entry(after, &rid);
         break;
       }
     }
@@ -316,18 +316,19 @@ RC Table::get_record(const RID &rid, Record &record)
   return rc;
 }
 
+// 封存，暂不使用
 RC Table::recover_insert_record(Record &record)
 {
   RC rc = RC::SUCCESS;
-  rc = record_handler_->recover_insert_record(record.data(), table_meta_.record_size(), record.rid());
+//  rc = record_handler_->recover_insert_record(record, record.rid());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Insert record failed. table name=%s, rc=%s", table_meta_.name(), strrc(rc));
     return rc;
   }
 
-  rc = insert_entry_of_indexes(record.data(), record.rid());
+  rc = insert_entry_of_indexes(record, record.rid());
   if (rc != RC::SUCCESS) { // 可能出现了键值重复
-    RC rc2 = delete_entry_of_indexes(record.data(), record.rid(), false/*error_on_not_exists*/);
+    RC rc2 = delete_entry_of_indexes(record, record.rid(), false/*error_on_not_exists*/);
     if (rc2 != RC::SUCCESS) {
       LOG_ERROR("Failed to rollback index data when insert index entries failed. table name=%s, rc=%d:%s",
                 name(), rc2, strrc(rc2));
@@ -402,7 +403,7 @@ RC Table::init_record_handler(const char *base_dir)
   }
 
   record_handler_ = new RecordFileHandler();
-  rc = record_handler_->init(data_buffer_pool_);
+  rc = record_handler_->init(data_buffer_pool_, &table_meta_);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to init record handler. rc=%s", strrc(rc));
     data_buffer_pool_->close_file();
@@ -466,7 +467,7 @@ RC Table::create_index(Trx *trx, const FieldMeta *field_meta, const char *index_
                name(), index_name, strrc(rc));
       return rc;
     }
-    rc = index->insert_entry(record.data(), &record.rid());
+    rc = index->insert_entry(record, &record.rid());
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
                name(), index_name, strrc(rc));
@@ -522,7 +523,7 @@ RC Table::delete_record(const Record &record)
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
-    rc = index->delete_entry(record.data(), &record.rid());
+    rc = index->delete_entry(record, &record.rid());
     ASSERT(RC::SUCCESS == rc, 
            "failed to delete entry from index. table name=%s, index name=%s, rid=%s, rc=%s",
            name(), index->index_meta().name(), record.rid().to_string().c_str(), strrc(rc));
@@ -531,7 +532,7 @@ RC Table::delete_record(const Record &record)
   return rc;
 }
 
-RC Table::insert_entry_of_indexes(const char *record, const RID &rid)
+RC Table::insert_entry_of_indexes(const Record &record, const RID &rid)
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
@@ -543,7 +544,7 @@ RC Table::insert_entry_of_indexes(const char *record, const RID &rid)
   return rc;
 }
 
-RC Table::delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists)
+RC Table::delete_entry_of_indexes(const Record &record, const RID &rid, bool error_on_not_exists)
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {

@@ -31,10 +31,10 @@ class FieldMeta
 {
 public:
   FieldMeta();
-  FieldMeta(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable);
+  FieldMeta(const char *name, AttrType attr_type, int attr_len, int id, bool visible, bool nullable);
   ~FieldMeta() = default;
 
-  RC init(const char *name, AttrType attr_type, int attr_len, bool visible, bool nullable);
+  RC init(const char *name, AttrType attr_type, int attr_len, int id, bool visible, bool nullable);
 
 public:
   const char *name() const;
@@ -42,6 +42,7 @@ public:
   int len() const;
   bool visible() const;
   bool nullable() const;
+  int id() const;
 
 public:
   void desc(std::ostream &os) const;
@@ -53,6 +54,7 @@ public:
 protected:
   std::string name_;
   AttrType attr_type_;
+  int id_;
   int attr_len_; // 可变长为0
   bool visible_;
   bool nullable_;
