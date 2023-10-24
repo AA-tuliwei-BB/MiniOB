@@ -254,7 +254,7 @@ public:
   }
   int cell_num() const override
   {
-    return speces_.size();
+    return tuple_->cell_num();
   }
 
   RC cell_at(int index, Value &cell) const override

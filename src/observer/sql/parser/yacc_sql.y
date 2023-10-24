@@ -155,7 +155,6 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
-%type <complex_expr>        rel_attr
 %type <attr_infos>          attr_def_list
 %type <number>              null_def
 %type <attr_info>           attr_def
@@ -169,8 +168,6 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <expression_list>     expression_list
 %type <complex_expr>        complex_expr
 %type <complex_expr_list>   complex_expr_list
-%type <complex_expr>        aggragate_function
-%type <complex_expr>        nonaggr_function
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
 %type <sql_node>            insert_stmt
@@ -544,7 +541,8 @@ expression:
     
     ;
 
-aggragate_function:
+
+complex_expr:
     MAX_FUNC LBRACE complex_expr RBRACE {
       $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@1));      
     }
@@ -558,12 +556,10 @@ aggragate_function:
       $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@1));
     }
     | SUM_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@1));      
+      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@1));
     }
-    ;
 
-nonaggr_function:
-    LENGTH_FUNC LBRACE complex_expr RBRACE {
+    | LENGTH_FUNC LBRACE complex_expr RBRACE {
       $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, token_name(sql_string, &@1));      
     }
     | ROUND_FUNC LBRACE complex_expr RBRACE {
@@ -572,21 +568,30 @@ nonaggr_function:
     | DATE_FORMAT_FUNC LBRACE complex_expr RBRACE {
       $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));      
     }
-    ;
-complex_expr:
-    aggragate_function
-    {
-      $$ = $1;
+    | ID alias_attr {
+      RelAttrSqlNode* tmp = new RelAttrSqlNode;
+      tmp->relation_name = "";
+      tmp->attribute_name = $1;
+      if($2 != nullptr){
+        tmp->alias_name = $2;
+        free($2);
+      } else tmp->alias_name = "";
+      free($1);
+      $$ = tmp;
     }
-    | nonaggr_function
-    {
-      $$ = $1;
+    | ID DOT ID alias_attr{
+      RelAttrSqlNode* tmp = new RelAttrSqlNode;
+      tmp->relation_name  = $1;
+      tmp->attribute_name = $3;
+      if($4 != nullptr){
+        tmp->alias_name = $4;
+        free($4);
+      } else tmp->alias_name = "";
+      free($1);
+      free($3);
+      $$ = tmp;
     }
-    | rel_attr
-    {
-      $<complex_expr>$ = $1;
-    }
-    complex_expr '+' complex_expr {
+    | complex_expr '+' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::ADD, $1, $3, sql_string, &@$);
     }
     | complex_expr '-' complex_expr {
@@ -643,32 +648,6 @@ select_attr:
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($1));
-    }
-    ;
-
-rel_attr:
-    ID alias_attr {
-      RelAttrSqlNode* tmp = new RelAttrSqlNode;
-      tmp->relation_name = "";
-      tmp->attribute_name = $1;
-      if($2 != nullptr){
-        tmp->alias_name = $2;
-        free($2);
-      } else tmp->alias_name = "";
-      free($1);
-      $$ = tmp;
-    }
-    | ID DOT ID alias_attr{
-      RelAttrSqlNode* tmp = new RelAttrSqlNode;
-      tmp->relation_name  = $1;
-      tmp->attribute_name = $3;
-      if($4 != nullptr){
-        tmp->alias_name = $4;
-        free($4);
-      } else tmp->alias_name = "";
-      free($1);
-      free($3);
-      $$ = tmp;
     }
     ;
 
