@@ -72,7 +72,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
        return build_result.second;
     }
     ExprType expressionType = build_result.first->type();
-    if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR){
+    if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC){
       LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
       return RC::INVALID_ARGUMENT;
     }

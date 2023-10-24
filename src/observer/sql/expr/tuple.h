@@ -259,7 +259,7 @@ public:
 
   RC cell_at(int index, Value &cell) const override
   {
-    if (index < 0 || index >= static_cast<int>(speces_.size())) {
+    if (index < 0 || index >= static_cast<int>(tuple_->cell_num())) {
       return RC::INTERNAL;
     }
     if (tuple_ == nullptr) {

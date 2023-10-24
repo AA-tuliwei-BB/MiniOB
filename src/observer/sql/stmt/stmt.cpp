@@ -170,7 +170,7 @@ std::string db_name){
           query_fields.push_back(Field(table, field_meta));
           
           std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
-          if(!relation_attr->alias_name.empty())
+          relation_attr->set_name();
           result->set_name(relation_attr->name);
           return std::make_pair(std::move(result), RC::SUCCESS);
         }
@@ -190,8 +190,8 @@ std::string db_name){
 
       query_fields.push_back(Field(table, field_meta));
       std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
-      if(!relation_attr->alias_name.empty())
-        result->set_name(relation_attr->name);
+      relation_attr->set_name();
+      result->set_name(relation_attr->name);
       return std::make_pair(std::move(result), RC::SUCCESS);
     }
   }
@@ -205,7 +205,6 @@ std::string db_name){
   break;
   case ExprSqlNode::Type::AGGR_FUNC_EXPR:{
     AggrSqlNode &cur = *(AggrSqlNode*)father;
-    cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> son_parse = 
     build_expression(cur.son.get(), tables, table_map, query_fields, db_name);
     if(son_parse.second != RC::SUCCESS){
@@ -214,13 +213,14 @@ std::string db_name){
     }
     std::unique_ptr<AggrFuncExpr> result(new AggrFuncExpr(
     static_cast<AggrFuncExpr::Type>(static_cast<int>(cur.func_type) - 1), std::move(son_parse.first)));
+    cur.set_name();
     result->set_name(cur.name);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
   case ExprSqlNode::Type::FUNC_EXPR:{
    FuncSqlNode &cur = *(FuncSqlNode*)father;
-    cur.set_name();
+    
     std::pair<std::unique_ptr<Expression>, RC> son_parse = 
     build_expression(cur.son.get(), tables, table_map, query_fields, db_name);
     if(son_parse.second != RC::SUCCESS){
@@ -243,6 +243,7 @@ std::string db_name){
       break;
     }
     std::unique_ptr<FuncExpr> result(new FuncExpr(result_type, std::move(son_parse.first)));
+    cur.set_name();
     result->set_name(cur.name);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
