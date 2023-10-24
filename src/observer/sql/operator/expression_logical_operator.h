@@ -20,7 +20,7 @@ public:
 
   LogicalOperatorType type() const override
   {
-    return LogicalOperatorType::PROJECTION;
+    return LogicalOperatorType::EXPRESSION;
   }
 
   std::vector<std::unique_ptr<Expression>> &expressions()

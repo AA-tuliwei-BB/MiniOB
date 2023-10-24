@@ -45,6 +45,7 @@ enum class ExprType
   ARITHMETIC,   ///< 算术运算
   AGGRFUNC,     ///< 聚合函数
   FUNCTION,     ///< 普通函数
+  ERROR,        ///< 未成功解析的表达式
 };
 
 /**
@@ -95,6 +96,7 @@ public:
    */
   virtual std::string name() const { return name_; }
   virtual void set_name(std::string name) { name_ = name; }
+  virtual bool is_attr() const = 0;
 
 private:
   std::string  name_;
@@ -117,6 +119,7 @@ public:
 
   ExprType type() const override { return ExprType::FIELD; }
   AttrType value_type() const override { return field_.attr_type(); }
+  bool is_attr() const { return true; }
 
   Field &field() { return field_; }
 
@@ -166,6 +169,8 @@ public:
 
   AttrType value_type() const override { return value_.attr_type(); }
 
+  bool is_attr() const { return false; }
+
   void get_value(Value &value) const { value = value_; }
 
   const Value &get_value() const { return value_; }
@@ -185,13 +190,15 @@ private:
  */
 class StarExpr : public Expression {
 public:
-  StarExpr() {name_ = "*"; };
+  StarExpr() {set_name("*"); };
   ~StarExpr() = default;
-  RC get_value(const Tuple &tuple, Value &value) {return RC::UNIMPLENMENT; }
+  RC get_value(const Tuple &tuple, Value &value) const {return RC::UNIMPLENMENT; }
   ExprType type() const { return ExprType::STAR; }
   AttrType value_type() const {return AttrType::UNDEFINED; };
+  bool is_attr() const { return true; }
 
 };
+
 
 /**
  * @brief 类型转换表达式
@@ -210,6 +217,8 @@ public:
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   RC try_get_value(Value &value) const override;
+
+  bool is_attr() const { return false; }
 
   AttrType value_type() const override { return cast_type_; }
 
@@ -238,11 +247,13 @@ public:
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   AttrType value_type() const override { return BOOLEANS; }
+  bool is_attr() const { return false; }
 
   CompOp comp() const { return comp_; }
 
   std::unique_ptr<Expression> &left()  { return left_;  }
   std::unique_ptr<Expression> &right() { return right_; }
+
 
   /**
    * 尝试在没有tuple的情况下获取当前表达式的值
@@ -283,7 +294,7 @@ public:
   ExprType type() const override { return ExprType::CONJUNCTION; }
 
   AttrType value_type() const override { return BOOLEANS; }
-
+  bool is_attr() const { return false; }
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   Type conjunction_type() const { return conjunction_type_; }
@@ -316,7 +327,7 @@ public:
   virtual ~ArithmeticExpr() = default;
 
   ExprType type() const override { return ExprType::ARITHMETIC; }
-
+  bool is_attr() const { return false; }
   AttrType value_type() const override;
 
   RC get_value(const Tuple &tuple, Value &value) const override;
@@ -381,6 +392,7 @@ public:
   virtual ~AggrFuncExpr() = default;
 
   AttrType value_type() const override;
+  bool is_attr() const { return false; }
 
   RC add_value(const Tuple &tuple);
   RC get_value(Value &value) const;

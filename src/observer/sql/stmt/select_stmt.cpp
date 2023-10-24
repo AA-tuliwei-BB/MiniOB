@@ -27,16 +27,9 @@ SelectStmt::~SelectStmt()
   }
 }
 
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
-{
-  const TableMeta &table_meta = table->table_meta();
-  const int field_num = table_meta.field_num();
-  for (int i = table_meta.sys_field_num(); i < field_num; i++) {
-    field_metas.push_back(Field(table, table_meta.field(i)));
-  }
-}
 
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
+
+RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 {
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
@@ -64,36 +57,39 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   }
 
   // collect query fields in `select` statement
+  Table *default_table = nullptr;
+  if (tables.size() == 1) {
+    default_table = tables[0];
+  }
   std::vector<Field> query_fields;
-  std::vector<Expression> expressions;
+  std::vector<std::unique_ptr<Expression>> expressions;
+  std::vector<std::string> alias;
   for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
-    const ExprSqlNode &cur = select_sql.expressions[i];
-    std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(cur, tables, table_map, query_fields, db_name);
+    ExprSqlNode &cur = *select_sql.expressions[i];
+    std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()));
     if(build_result.second != RC::SUCCESS){
        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
        return build_result.second;
     }
     ExprType expressionType = build_result.first->type();
-    if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::ARITHMETIC){
-      LOG_WARN("invalid expression type(id = %d) in select statement." expressionType);
+    if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR){
+      LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
       return RC::INVALID_ARGUMENT;
     }
-    expressions.push_back(build_result.first);
+    expressions.push_back(std::move(build_result.first));
+    alias.push_back(cur.name);
   }
 
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
 
-  Table *default_table = nullptr;
-  if (tables.size() == 1) {
-    default_table = tables[0];
-  }
+  
 
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
   RC rc = FilterStmt::create(db,
       default_table,
       &table_map,
-      select_sql.conditions.data(),
+      select_sql.conditions,
       static_cast<int>(select_sql.conditions.size()),
       filter_stmt);
   if (rc != RC::SUCCESS) {

@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "sql/parser/parse.h"
+#include "sql/expr/expression.h"
 
 class Record;
 class Table;
@@ -47,7 +48,7 @@ public:
   virtual ~DefaultConditionFilter();
 
   RC init(const ConDesc &left, const ConDesc &right, AttrType attr_type, CompOp comp_op);
-  RC init(Table &table, const ConditionSqlNode &condition);
+  RC init(Table &table, ComparisonExpr &condition);
 
   virtual bool filter(const Record &rec) const;
 
@@ -86,7 +87,7 @@ public:
   virtual ~CompositeConditionFilter();
 
   RC init(const ConditionFilter *filters[], int filter_num);
-  RC init(Table &table, const ConditionSqlNode *conditions, int condition_num);
+  RC init(Table &table, ComparisonExpr *conditions, int condition_num);
   virtual bool filter(const Record &rec) const;
 
 public:

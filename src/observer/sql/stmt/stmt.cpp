@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "common/log/log.h"
+#include "common/lang/string.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/insert_stmt.h"
 #include "sql/stmt/delete_stmt.h"
@@ -110,105 +111,121 @@ RC Stmt::create_stmt(Db *db, ParsedSqlNode &sql_node, Stmt *&stmt)
   return RC::UNIMPLENMENT;
 }
 
-std::pair<std::unique_ptr<Expression>, RC> build_expression(ExprSqlNode father,
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
+{
+  const TableMeta &table_meta = table->table_meta();
+  const int field_num = table_meta.field_num();
+  for (int i = table_meta.sys_field_num(); i < field_num; i++) {
+    field_metas.push_back(Field(table, table_meta.field(i)));
+  }
+}
+
+std::pair<std::unique_ptr<Expression>, RC> build_expression(ExprSqlNode* father,
 std::vector<Table *> &tables, 
 std::unordered_map<std::string, Table *> &table_map,
 std::vector<Field> &query_fields,
 std::string db_name){
-  switch (father.get_type())
+  switch (father->get_type())
   {
   case ExprSqlNode::Type::REL_ATTR_EXPR:{
-    const RelAttrSqlNode &relation_attr = father;
-    if (common::is_blank(relation_attr.relation_name.c_str()) &&
-        0 == strcmp(relation_attr.attribute_name.c_str(), "*")) {
-      // for (Table *table : tables) {
-      //   wildcard_fields(table, query_fields);
-      // }
-      return std::make_pair(std::unique_ptr<Expression>(StarExpr()), RC::SUCCESS);
-    } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
-      const char *table_name = relation_attr.relation_name.c_str();
-      const char *field_name = relation_attr.attribute_name.c_str();
+    RelAttrSqlNode *relation_attr = (RelAttrSqlNode *)father;
+    relation_attr->set_name();
+    if (common::is_blank(relation_attr->relation_name.c_str()) &&
+        0 == strcmp(relation_attr->attribute_name.c_str(), "*")) {
+      for (Table *table : tables) {
+        wildcard_fields(table, query_fields);
+      }
+      return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
+    } else if (!common::is_blank(relation_attr->relation_name.c_str())) {
+      const char *table_name = relation_attr->relation_name.c_str();
+      const char *field_name = relation_attr->attribute_name.c_str();
 
       if (0 == strcmp(table_name, "*")) {
         if (0 != strcmp(field_name, "*")) {
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
-          return std::make_pair<std::unique_ptr<Expression>(), RC::SCHEMA_FIELD_MISSING>;
+          return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
         }
-        // for (Table *table : tables) {
-        //   wildcard_fields(table, query_fields);
-        // }
-        return std::make_pair(std::unique_ptr<Expression>(StarExpr()), RC::SUCCESS);
+        for (Table *table : tables) {
+          wildcard_fields(table, query_fields);
+        }
+        return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
       } else {
         auto iter = table_map.find(table_name);
         if (iter == table_map.end()) {
           LOG_WARN("no such table in from list: %s", table_name);
-          return std::make_pair(std::unique_ptr<Expression>(), RC::SCHEMA_FIELD_MISSING);
+          return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
         }
 
         Table *table = iter->second;
         if (0 == strcmp(field_name, "*")) {
-          // wildcard_fields(table, query_fields);
-          return std::make_pair(std::unique_ptr<Expression>(StarExpr()), RC::SUCCESS);
+          wildcard_fields(table, query_fields);
+          return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
           if (nullptr == field_meta) {
             LOG_WARN("no such field. field=%s.%s.%s", db_name, table->name(), field_name);
-            return std::make_pair(std::unique_ptr<Expression>(), RC::SCHEMA_FIELD_MISSING);
+            return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
           }
 
           query_fields.push_back(Field(table, field_meta));
           
-          std::unique_ptr<Expression> result(FieldExpr(table, field_meta));
-          if(!relation_attr.alias_name.empty())
-          result->set_name(relation_attr.alias_name);
-          return std::make_pair(result, RC::SUCCESS);
+          std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
+          if(!relation_attr->alias_name.empty())
+          result->set_name(relation_attr->name);
+          return std::make_pair(std::move(result), RC::SUCCESS);
         }
       }
     } else {
       if (tables.size() != 1) {
-        LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr.attribute_name.c_str());
-        return std::make_pair(std::unique_ptr<Expression>(), RC::SCHEMA_FIELD_MISSING);
+        LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr->attribute_name.c_str());
+        return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
       }
 
       Table *table = tables[0];
-      const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name.c_str());
+      const FieldMeta *field_meta = table->table_meta().field(relation_attr->attribute_name.c_str());
       if (nullptr == field_meta) {
-        LOG_WARN("no such field. field=%s.%s.%s", db_name, table->name(), relation_attr.attribute_name.c_str());
-        return std::make_pair(std::unique_ptr<Expression>(), RC::SCHEMA_FIELD_MISSING);
+        LOG_WARN("no such field. field=%s.%s.%s", db_name, table->name(), relation_attr->attribute_name.c_str());
+        return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
       }
 
       query_fields.push_back(Field(table, field_meta));
-      std::unique_ptr<Expression> result(FieldExpr(table, field_meta));
-      if(!relation_attr.alias_name.empty())
-        result->set_name(relation_attr.alias_name);
-      return std::make_pair(result, RC::SUCCESS);
+      std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
+      if(!relation_attr->alias_name.empty())
+        result->set_name(relation_attr->name);
+      return std::make_pair(std::move(result), RC::SUCCESS);
     }
   }
   break;
   case ExprSqlNode::Type::VALUE_EXPR:{
-    const ValueSqlNode &cur = father;
-    return std::make_pair(std::unique_ptr<Expression>(ValueExpr(cur.val)), RC::SUCCESS);
+    ValueSqlNode &cur = *(ValueSqlNode*)father;
+    std::unique_ptr<Expression> result(new ValueExpr(cur.val));
+    result->set_name(cur.name);
+    return std::make_pair(std::move(result), RC::SUCCESS);
   } 
   break;
   case ExprSqlNode::Type::AGGR_FUNC_EXPR:{
-    const AggrSqlNode &cur = father;
+    AggrSqlNode &cur = *(AggrSqlNode*)father;
+    cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> son_parse = 
-    build_expression(cur.son, tables, table_map, query_fields, db_name);
+    build_expression(cur.son.get(), tables, table_map, query_fields, db_name);
     if(son_parse.second != RC::SUCCESS){
       LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), son_parse.second);
-      return std::make_pair(std::unique_ptr<Expression>(), son_parse.second);
+      return std::make_pair(std::unique_ptr<Expression>(nullptr), son_parse.second);
     }
-    std::unique_ptr<AggrFuncExpr> result(AggrFuncExpr(cur.func_type, std::move(son_parse.first)));
-    return std::make_pair(result, RC::SUCCESS);
+    std::unique_ptr<AggrFuncExpr> result(new AggrFuncExpr(
+    static_cast<AggrFuncExpr::Type>(static_cast<int>(cur.func_type) - 1), std::move(son_parse.first)));
+    result->set_name(cur.name);
+    return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
   case ExprSqlNode::Type::FUNC_EXPR:{
-    const FuncSqlNode &cur = father;
+   FuncSqlNode &cur = *(FuncSqlNode*)father;
+    cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> son_parse = 
-    build_expression(cur.son, tables, table_map, query_fields, db_name);
+    build_expression(cur.son.get(), tables, table_map, query_fields, db_name);
     if(son_parse.second != RC::SUCCESS){
       LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), son_parse.second);
-      return std::make_pair(std::unique_ptr<Expression>(), son_parse.second);
+      return std::make_pair(std::unique_ptr<Expression>(nullptr), son_parse.second);
     }
     FuncExpr::Type result_type;
     switch (cur.func_type)
@@ -225,57 +242,58 @@ std::string db_name){
     default:
       break;
     }
-    std::unique_ptr<FuncExpr> result(result_type, std::move(son_parse.first));
-    return std::make_pair(result, RC::SUCCESS);
+    std::unique_ptr<FuncExpr> result(new FuncExpr(result_type, std::move(son_parse.first)));
+    result->set_name(cur.name);
+    return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
   case ExprSqlNode::Type::ARITHMATIC_EXPR:{
-    const ArithSqlNode &cur = father;
-    
+    const ArithSqlNode &cur = *(ArithSqlNode*)father;
     std::pair<std::unique_ptr<Expression>, RC> left_parse = 
-    build_expression(cur.left, tables, table_map, query_fields, db_name);
+    build_expression(cur.left.get(), tables, table_map, query_fields, db_name);
     if(left_parse.second != RC::SUCCESS){
     LOG_WARN("Error when parsing arithmatic expression sql node's left son, error_code = %d.", left_parse.second);
-    return std::make_pair(std::unique_ptr<Expression>(), left_parse.second);
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), left_parse.second);
     }
 
     std::pair<std::unique_ptr<Expression>, RC> right_parse = 
-    build_expression(cur.right, tables, table_map, query_fields, db_name);
+    build_expression(cur.right.get(), tables, table_map, query_fields, db_name);
     if(right_parse.second != RC::SUCCESS){
     LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
-    return std::make_pair(std::unique_ptr<Expression>(), right_parse.second);
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), right_parse.second);
     }
-
-    ArithmeticExpr::Type result_type = cur.operation_type;
+    
+    ArithmeticExpr::Type result_type;
     // switch (cur.operation_type)
     // {
-    //   case ArithSqlNode::OperationType::ADD:
+    //   case ArithSqlNode::Type::ADD:
     //     result_type = ArithmeticExpr::Type::ADD;
     //     break;
-    //   case ArithSqlNode::OperationType::SUB:
+    //   case ArithSqlNode::Type::SUB:
     //     result_type = ArithmeticExpr::Type::SUB;
     //     break;
-    //   case ArithSqlNode::OperationType::MUL:
+    //   case ArithSqlNode::Type::MUL:
     //     result_type = ArithmeticExpr::Type::MUL;
     //     break;
-    //   case ArithSqlNode::OperationType::DIV:
+    //   case ArithSqlNode::Type::DIV:
     //     result_type = ArithmeticExpr::Type::DIV;
     //     break;
-    //   case ArithSqlNode::OperationType::NEGATIVE:
+    //   case ArithSqlNode::Type::NEGATIVE:
     //     result_type = ArithmeticExpr::Type::NEGATIVE;
     //     break;
     //   default:
     //     LOG_WARN("Unknown operator type, type = %d.", cur.operation_type);
-    //     return std::make_pair(std::unique_ptr<Expression>(), RC::INVALID_ARGUMENT);
+    //     return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
     //     break;
     // }
     
-    std::unique_ptr<ArithmeticExpr> result(result_type, std::move(left_parse.first), std::move(right_parse.first));
-    return std::make_pair(result, RC::SUCCESS);
+    std::unique_ptr<ArithmeticExpr> result(new ArithmeticExpr(static_cast<ArithmeticExpr::Type>(cur.operation_type), std::move(left_parse.first), std::move(right_parse.first)));
+    result->set_name(cur.name);
+    return std::make_pair(std::move(result), RC::SUCCESS);
   }
   default:
-    LOG_WARN("invalid expression type. type = %d.", father.get_type());
-    return std::make_pair(std::unique_ptr<Expression>(), RC::INVALID_ARGUMENT);
+    LOG_WARN("invalid expression type. type = %d.", static_cast<int>(father->get_type()));
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
   break;
   }
 }

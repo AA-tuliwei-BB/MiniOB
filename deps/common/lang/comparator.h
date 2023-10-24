@@ -15,7 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 namespace common {
-const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
+const bool field_type_compare_compatible_table[7][7] = {
     0, 0, 0, 0, 0, 0, 0,
     0, 1, 1, 0, 1, 1, 1,
     0, 1, 1, 0, 1, 1, 1,
