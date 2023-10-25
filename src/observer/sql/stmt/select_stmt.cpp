@@ -64,6 +64,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   std::vector<Field> query_fields;
   std::vector<std::unique_ptr<Expression>> expressions;
   std::vector<std::string> alias;
+  bool is_aggregate;
   for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
     ExprSqlNode &cur = *select_sql.expressions[i];
     std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()));
@@ -76,8 +77,22 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
       LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
       return RC::INVALID_ARGUMENT;
     }
+    if(i != static_cast<int>(select_sql.expressions.size()) - 1){
+      if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
+        LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+      return RC::INVALID_ARGUMENT;
+      }
+    }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
+
+    AggrFuncExpr* judger = (AggrFuncExpr*) build_result.first.get();
+    if(expressionType == ExprType::AGGRFUNC && cur.name.size() > 1 && judger->func_type() == AggrFuncExpr::Type::COUNT_FUNC){
+      AggrSqlNode* aggr = (AggrSqlNode*)&cur;
+      alias.push_back(aggr->function_name + "(*)");
+    }else {
+      for(auto it = cur.name.begin(); it != cur.name.end(); ++it)
+      alias.push_back(*it);
+    }
     expressions.push_back(std::move(build_result.first));
-    alias.push_back(cur.name);
   }
 
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
@@ -99,11 +114,13 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
+  select_stmt->is_aggregate_ = expressions[0]->type() == ExprType::AGGRFUNC;
   select_stmt->expressions_.swap(expressions);
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_.swap(alias);
   select_stmt->filter_stmt_ = filter_stmt;
+  
   stmt = select_stmt;
   return RC::SUCCESS;
 }

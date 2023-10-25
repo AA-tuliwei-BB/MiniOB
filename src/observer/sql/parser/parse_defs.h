@@ -63,10 +63,11 @@ struct ExprSqlNode{
 
   virtual ExprSqlNode::Type get_type() const = 0;
   virtual RC set_name(std::string n){
-    name = n;
+    if(name.empty())
+    name.push_back(n);
     return RC::SUCCESS;
   }
-  std::string name;
+  std::vector<std::string> name;
 };
 
 struct ValueSqlNode : public ExprSqlNode
@@ -78,7 +79,8 @@ struct ValueSqlNode : public ExprSqlNode
      return VALUE_EXPR;
   };
   RC set_name(std::string n){
-    name = n;
+    if(name.empty())
+    name.push_back(n);
     return RC::SUCCESS;
   }
 };
@@ -93,11 +95,13 @@ struct RelAttrSqlNode : public ExprSqlNode
      return REL_ATTR_EXPR; 
   };
   RC set_name(){
-    if(!alias_name.empty())
-      name = alias_name;
+    if(name.empty()){
+      if(!alias_name.empty())
+      name.push_back(alias_name);
     else if(relation_name.empty())
-      name = attribute_name;
-    else name = relation_name + '.' + attribute_name;
+      name.push_back(attribute_name);
+    else name.push_back(relation_name + '.' + attribute_name);
+    }
     return RC::SUCCESS;
   }
 };
@@ -121,7 +125,8 @@ struct ArithSqlNode : public ExprSqlNode
      return ARITHMATIC_EXPR; 
   };
   RC set_name(std::string n){
-    name = n;
+    if(name.empty())
+    name.push_back(n);
     return RC::SUCCESS;
   }
 };
@@ -136,7 +141,9 @@ struct AggrSqlNode : public ExprSqlNode{
      return AGGR_FUNC_EXPR; 
   };
   RC set_name(){
-    name = function_name + "(" + son->name + ")";
+    for(auto it = son->name.begin(); it != son->name.end(); ++it){
+      name.push_back(function_name + "(" + *it + ")");
+    };
     return RC::SUCCESS;
   }
 };
@@ -151,7 +158,9 @@ struct FuncSqlNode : public ExprSqlNode{
      return FUNC_EXPR; 
   };
   RC set_name(){
-    name = function_name + "(" + son->name + ")";
+    for(auto it = son->name.begin(); it != son->name.end(); ++it){
+      name.push_back(function_name + "(" + *it + ")");
+    };
     return RC::SUCCESS;
   }
 };

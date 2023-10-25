@@ -111,12 +111,14 @@ RC Stmt::create_stmt(Db *db, ParsedSqlNode &sql_node, Stmt *&stmt)
   return RC::UNIMPLENMENT;
 }
 
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas, RelAttrSqlNode* relation_attr)
 {
+  relation_attr->name.clear();
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
     field_metas.push_back(Field(table, table_meta.field(i)));
+    relation_attr->name.push_back(std::string(table->name()) + "." + std::string(table_meta.field(i)->name()));
   }
 }
 
@@ -133,7 +135,7 @@ std::string db_name){
     if (common::is_blank(relation_attr->relation_name.c_str()) &&
         0 == strcmp(relation_attr->attribute_name.c_str(), "*")) {
       for (Table *table : tables) {
-        wildcard_fields(table, query_fields);
+        wildcard_fields(table, query_fields, relation_attr);
       }
       return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
     } else if (!common::is_blank(relation_attr->relation_name.c_str())) {
@@ -146,7 +148,7 @@ std::string db_name){
           return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::SCHEMA_FIELD_MISSING);
         }
         for (Table *table : tables) {
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, relation_attr);
         }
         return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
       } else {
@@ -158,7 +160,7 @@ std::string db_name){
 
         Table *table = iter->second;
         if (0 == strcmp(field_name, "*")) {
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, relation_attr);
           return std::make_pair(std::unique_ptr<Expression>(new StarExpr()), RC::SUCCESS);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
@@ -168,10 +170,10 @@ std::string db_name){
           }
 
           query_fields.push_back(Field(table, field_meta));
-          
-          std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
           relation_attr->set_name();
-          result->set_name(relation_attr->name);
+          std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
+          
+          // result->set_name(relation_attr->name[0]);
           return std::make_pair(std::move(result), RC::SUCCESS);
         }
       }
@@ -191,7 +193,7 @@ std::string db_name){
       query_fields.push_back(Field(table, field_meta));
       std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
       relation_attr->set_name();
-      result->set_name(relation_attr->name);
+      // result->set_name(relation_attr->name[0]);
       return std::make_pair(std::move(result), RC::SUCCESS);
     }
   }
@@ -199,7 +201,7 @@ std::string db_name){
   case ExprSqlNode::Type::VALUE_EXPR:{
     ValueSqlNode &cur = *(ValueSqlNode*)father;
     std::unique_ptr<Expression> result(new ValueExpr(cur.val));
-    result->set_name(cur.name);
+    // result->set_name(cur.name[0]);
     return std::make_pair(std::move(result), RC::SUCCESS);
   } 
   break;
@@ -214,7 +216,7 @@ std::string db_name){
     std::unique_ptr<AggrFuncExpr> result(new AggrFuncExpr(
     static_cast<AggrFuncExpr::Type>(static_cast<int>(cur.func_type) - 1), std::move(son_parse.first)));
     cur.set_name();
-    result->set_name(cur.name);
+    // result->set_name(cur.name[0]);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
@@ -244,7 +246,7 @@ std::string db_name){
     }
     std::unique_ptr<FuncExpr> result(new FuncExpr(result_type, std::move(son_parse.first)));
     cur.set_name();
-    result->set_name(cur.name);
+    // result->set_name(cur.name[0]);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
@@ -289,7 +291,7 @@ std::string db_name){
     // }
     
     std::unique_ptr<ArithmeticExpr> result(new ArithmeticExpr(static_cast<ArithmeticExpr::Type>(cur.operation_type), std::move(left_parse.first), std::move(right_parse.first)));
-    result->set_name(cur.name);
+    // result->set_name(cur.name[0]);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   default:

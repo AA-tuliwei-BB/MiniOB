@@ -591,6 +591,13 @@ complex_expr:
       free($3);
       $$ = tmp;
     }
+    | '*' {
+      RelAttrSqlNode* attr = new RelAttrSqlNode;
+      attr->relation_name  = "";
+      attr->attribute_name = "*";
+      attr->alias_name = "";
+      $$ = attr;
+    }
     | complex_expr '+' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::ADD, $1, $3, sql_string, &@$);
     }
@@ -634,14 +641,7 @@ complex_expr_list:
     ;
 
 select_attr:
-    '*' {
-      $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
-      RelAttrSqlNode* attr = new RelAttrSqlNode;
-      attr->relation_name  = "";
-      attr->attribute_name = "*";
-      $$->emplace_back(std::unique_ptr<ExprSqlNode>(attr));
-    }
-    | complex_expr complex_expr_list {
+    complex_expr complex_expr_list {
       if ($2 != nullptr) {
         $$ = $2;
       } else {
