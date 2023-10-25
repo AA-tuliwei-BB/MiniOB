@@ -271,7 +271,7 @@ RC MvccTrx::commit_with_trx_id(int32_t commit_xid)
   for (const Operation &operation : operations_) {
     switch (operation.type()) {
       case Operation::Type::INSERT: {
-        RID rid(operation.page_num(), operation.slot_num());
+        RID rid(operation.page_num(), operation.offset_num());
         Table *table = operation.table();
         Field begin_xid_field, end_xid_field;
         trx_fields(table, begin_xid_field, end_xid_field);
@@ -293,7 +293,7 @@ RC MvccTrx::commit_with_trx_id(int32_t commit_xid)
 
       case Operation::Type::DELETE: {
         Table *table = operation.table();
-        RID rid(operation.page_num(), operation.slot_num());
+        RID rid(operation.page_num(), operation.offset_num());
         
         Field begin_xid_field, end_xid_field;
         trx_fields(table, begin_xid_field, end_xid_field);
@@ -335,7 +335,7 @@ RC MvccTrx::rollback()
   for (const Operation &operation : operations_) {
     switch (operation.type()) {
       case Operation::Type::INSERT: {
-        RID rid(operation.page_num(), operation.slot_num());
+        RID rid(operation.page_num(), operation.offset_num());
         Record record;
         Table *table = operation.table();
         // TODO 这里虽然调用get_record好像多次一举，而且看起来放在table的实现中更好，
@@ -352,7 +352,7 @@ RC MvccTrx::rollback()
 
       case Operation::Type::DELETE: {
         Table *table = operation.table();
-        RID rid(operation.page_num(), operation.slot_num());
+        RID rid(operation.page_num(), operation.offset_num());
         
         ASSERT(rc == RC::SUCCESS, "failed to get record while rollback. rid=%s, rc=%s",
               rid.to_string().c_str(), strrc(rc));

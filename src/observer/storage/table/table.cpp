@@ -233,7 +233,7 @@ RC Table::open(const char *meta_file, const char *base_dir)
 RC Table::insert_record(Record &record)
 {
   RC rc = RC::SUCCESS;
-  rc = record_handler_->insert_record(record, table_meta_.record_size(), &record.rid());
+  rc = record_handler_->insert_record(record, &record.rid());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Insert record failed. table name=%s, rc=%s", table_meta_.name(), strrc(rc));
     return rc;
@@ -268,17 +268,59 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       }
     }
   }
+
+  // 判断有没有变长数据
+  bool variable_flag = false;
   const TableMeta &table_meta = this->table_meta();
-  auto visitor = [&fields, &values, &table_meta](Record &visited_record) {
+  for (auto &field : fields) {
+    if (table_meta.field(field.c_str())->len() == 0) {
+      variable_flag = true;
+      break;
+    }
+  }
+
+  Record after;
+  // 若没有，则一个一个字段修改
+  if (!variable_flag) {
     int fields_size = static_cast<int>(fields.size());
     for (int i = 0; i < fields_size; ++i) {
       const FieldMeta *field_meta = table_meta.field(fields[i].c_str());
-      memcpy(visited_record.data() + field_meta->offset(), values[i].data(), field_meta->len());
+      auto updater = [&values, &i, &field_meta](char *data) { memcpy(data, values[i].data(), field_meta->len()); };
+      record_handler_->update_record_field(rid, field_meta, updater);
     }
-  };
-  Record after;
-  get_record(rid, after);
-  record_handler_->visit_record(rid, false, visitor);
+    get_record(rid, after);
+  }
+
+  // 若有，则删除重新插入
+  else {
+    vector<Value> new_values;
+    auto         &field_meta = *table_meta_.field_metas();
+    for (int i = table_meta_.sys_field_num(); i < table_meta_.field_num(); ++i) {
+      bool changed = false;
+      for (int i = 0; i < int(fields.size()); ++i) {
+        if (fields[i] == field_meta[i].name()) {
+          new_values.push_back(values[i]);
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) {
+        Value cell;
+        cell.set_type(field_meta[i].type());
+        const char *record_data = before.data() + before.offset()[i];
+        cell.set_data(record_data, before.len());
+        new_values.push_back(cell);
+      }
+    }
+    RC rc = make_record(new_values.size(), new_values.data(), after);
+    if (rc != RC::SUCCESS) {
+      LOG_ERROR("Fail to make record when update");
+      return rc;
+    }
+    record_handler_->delete_record(&rid);
+    record_handler_->insert_record(after, &after.rid());
+  }
+
   for (auto index : this->indexes_) {
     for (std::string field_name : fields) {
       if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
@@ -297,11 +339,13 @@ RC Table::visit_record(const RID &rid, bool readonly, std::function<void(Record 
 
 RC Table::get_record(const RID &rid, Record &record)
 {
-  const int record_size = table_meta_.record_size();
-  char *record_data = (char *)malloc(record_size);
-  ASSERT(nullptr != record_data, "failed to malloc memory. record data size=%d", record_size);
+  char *record_data;
+  int record_size = 0;
 
-  auto copier = [&record, record_data, record_size](Record &record_src) {
+  auto copier = [&record, &record_data, &record_size](Record &record_src) {
+    record_size = record_src.size();
+    record_data = (char *)malloc(record_size);
+    ASSERT(nullptr != record_data, "failed to malloc memory. record data size=%d", record_size);
     memcpy(record_data, record_src.data(), record_size);
     record.set_rid(record_src.rid());
   };
@@ -371,21 +415,20 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     }
   }
 
-  // 复制所有字段的值
-  int record_size = table_meta_.record_size();
+  // 计算总长度，分配内存
+  int record_size = 0;
+  int table_size = value_num;
+  for (int i = 0; i < table_size; ++i) {
+    record_size += values[i].length();
+  }
   char *record_data = (char *)malloc(record_size);
 
-  for (int i = 0; i < value_num; i++) {
+  // 复制所有字段的值
+  for (int i = 0, offset = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
-    size_t copy_len = field->len();
-    if (field->type() == CHARS) {
-      const size_t data_len = value.length();
-      if (copy_len > data_len) {
-        copy_len = data_len + 1;
-      }
-    }
-    memcpy(record_data + field->offset(), value.data(), copy_len);
+    size_t copy_len = field->len() != 0 ? field->len() : value.length();
+    memcpy(record_data + offset, value.data(), copy_len);
   }
 
   record.set_data_owner(record_data, record_size);

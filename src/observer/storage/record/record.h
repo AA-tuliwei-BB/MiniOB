@@ -154,15 +154,16 @@ public:
     return data_ + offset_[field_id];
   }
 
-  const vector<int> & offset() const { return offset_; }
-  const vector<bool> & null() const { return null_; }
+  const std::vector<int> & offset() const { return offset_; }
+  const std::vector<bool> & null() const { return null_; }
 
-  vector<int> & offset() { return offset_; }
-  vector<bool> & null() { return null_; }
+  std::vector<int> & offset() { return offset_; }
+  std::vector<bool> & null() { return null_; }
 
   char       *data() { return this->data_; }
   const char *data() const { return this->data_; }
   int         len() const { return this->len_; }
+  int         size() const { return *--offset_.end(); }
 
   void set_rid(const RID &rid) { this->rid_ = rid; }
   void set_rid(const PageNum page_num, const OffsetNum offset)
@@ -179,6 +180,6 @@ private:
   char        *data_    = nullptr;
   int          len_     = 0;      /// 如果不是record自己来管理内存，这个字段可能是无效的
   bool         owner_   = false;  /// 表示当前是否由record来管理内存
-  vector<bool> null_;             /// 字段是否为空
-  vector<int>  offset_;           /// 字段偏移量，最后一个为边界
+  std::vector<bool> null_;             /// 字段是否为空
+  std::vector<int>  offset_;           /// 字段偏移量，最后一个为边界
 };

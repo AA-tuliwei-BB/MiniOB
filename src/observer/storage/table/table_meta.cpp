@@ -31,8 +31,7 @@ TableMeta::TableMeta(const TableMeta &other)
     : table_id_(other.table_id_),
     name_(other.name_),
     fields_(other.fields_),
-    indexes_(other.indexes_),
-    record_size_(other.record_size_)
+    indexes_(other.indexes_)
 {}
 
 void TableMeta::swap(TableMeta &other) noexcept
@@ -40,9 +39,9 @@ void TableMeta::swap(TableMeta &other) noexcept
   name_.swap(other.name_);
   fields_.swap(other.fields_);
   indexes_.swap(other.indexes_);
-  std::swap(record_size_, other.record_size_);
 }
 
+// MYTODO
 RC TableMeta::init(int32_t table_id, const char *name, int field_num, const AttrInfoSqlNode attributes[])
 {
   if (common::is_blank(name)) {
@@ -85,8 +84,6 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
 
     field_offset += attr_info.length;
   }
-
-  record_size_ = field_offset;
 
   table_id_ = table_id;
   name_     = name;
@@ -132,15 +129,6 @@ const FieldMeta *TableMeta::field(const char *name) const
   return nullptr;
 }
 
-const FieldMeta *TableMeta::find_field_by_offset(int offset) const
-{
-  for (const FieldMeta &field : fields_) {
-    if (field.offset() == offset) {
-      return &field;
-    }
-  }
-  return nullptr;
-}
 int TableMeta::field_num() const
 {
   return fields_.size();
@@ -183,11 +171,6 @@ const IndexMeta *TableMeta::index(int i) const
 int TableMeta::index_num() const
 {
   return indexes_.size();
-}
-
-int TableMeta::record_size() const
-{
-  return record_size_;
 }
 
 int TableMeta::serialize(std::ostream &ss) const
@@ -273,13 +256,12 @@ int TableMeta::deserialize(std::istream &is)
     }
   }
 
-  auto comparator = [](const FieldMeta &f1, const FieldMeta &f2) { return f1.offset() < f2.offset(); };
+  auto comparator = [](const FieldMeta &f1, const FieldMeta &f2) { return f1.id() < f2.id(); };
   std::sort(fields.begin(), fields.end(), comparator);
 
   table_id_ = table_id;
   name_.swap(table_name);
   fields_.swap(fields);
-  record_size_ = fields_.back().offset() + fields_.back().len() - fields_.begin()->offset();
 
   const Json::Value &indexes_value = table_value[FIELD_INDEXES];
   if (!indexes_value.empty()) {

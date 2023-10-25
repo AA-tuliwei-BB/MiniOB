@@ -325,7 +325,7 @@ public:
    * @param record_size 记录大小
    * @param rid         返回该记录的标识符
    */
-  RC insert_record(const Record &record, int record_size, RID *rid);
+  RC insert_record(const Record &record, RID *rid);
 
    /**
    * @brief 数据库恢复时，在指定文件指定位置插入数据（暂时封存，要用再写）
@@ -364,7 +364,7 @@ public:
    * @param field_id 想要访问的字段的编号，不可以修改变长字段！变长字段需要删除并重新插入
    * @param updater 修改记录的回调函数
    */
-  RC update_record_field(const RID &rid, FieldMeta *field, std::function<void(char *)> updater);
+  RC update_record_field(const RID &rid, const FieldMeta *field, std::function<void(char *)> updater);
 
 private:
   /**

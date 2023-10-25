@@ -549,7 +549,7 @@ void RecordFileHandler::close()
   }
 }
 
-RC RecordFileHandler::update_record_field(const RID &rid, FieldMeta *field, std::function<void(char *)> updater)
+RC RecordFileHandler::update_record_field(const RID &rid, const FieldMeta *field, std::function<void(char *)> updater)
 {
   // 判断是不是可变的，如果是，终止
   if (field->len() == 0) {
@@ -678,7 +678,7 @@ RC RecordFileHandler::get_new_page(RecordPageHandler &record_page_handler, PageN
     return ret;
 }
 
-RC RecordFileHandler::insert_record(const Record &record, int record_size, RID *rid)
+RC RecordFileHandler::insert_record(const Record &record, RID *rid)
 {
   RC ret = RC::SUCCESS;
 

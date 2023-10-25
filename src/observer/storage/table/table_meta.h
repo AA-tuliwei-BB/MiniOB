@@ -21,6 +21,9 @@ See the Mulan PSL v2 for more details. */
 #include "storage/field/field_meta.h"
 #include "storage/index/index_meta.h"
 #include "common/lang/serializable.h"
+#include "storage/record/record.h"
+
+int align8(int size);
 
 /**
  * @brief 表元数据
@@ -47,7 +50,6 @@ public:
   const FieldMeta *trx_field() const;
   const FieldMeta *field(int index) const;
   const FieldMeta *field(const char *name) const;
-  const FieldMeta *find_field_by_offset(int offset) const;
   const std::vector<FieldMeta> *field_metas() const
   {
     return &fields_;
@@ -61,8 +63,6 @@ public:
   const IndexMeta *find_index_by_field(const char *field) const;
   const IndexMeta *index(int i) const;
   int index_num() const;
-
-  int record_size() const;
 
   int variable_length_count() const { return variable_length_count_; }
 
@@ -85,5 +85,4 @@ protected:
 
   int variable_length_count_ = 0;
   int nullable_count_ = 0;
-  int record_size_ = 0;
 };
