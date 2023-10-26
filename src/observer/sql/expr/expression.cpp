@@ -425,7 +425,7 @@ RC AggrFuncExpr::add_value(const Tuple &tuple)
   case CHARS: {
     min_.set_string(std::min(min_.get_string(), son_value.get_string()).c_str());
     max_.set_string(std::max(max_.get_string(), son_value.get_string()).c_str());
-  }
+  } break;
   case DATES: {
     sum_.set_int(sum_.get_int() + son_value.get_int());
     if (min_.compare(son_value) > 0) {
