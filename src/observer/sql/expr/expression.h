@@ -90,6 +90,7 @@ public:
    * @details 一个表达式运算出结果后，只有一个值
    */
   virtual AttrType value_type() const = 0;
+  
 
   /**
    * @brief 表达式的名字，比如是字段名称，或者用户在执行SQL语句时输入的内容

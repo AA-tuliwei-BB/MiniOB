@@ -63,11 +63,11 @@ struct ExprSqlNode{
 
   virtual ExprSqlNode::Type get_type() const = 0;
   virtual RC set_name(std::string n){
-    if(name.empty())
-    name.push_back(n);
+    name = n;
     return RC::SUCCESS;
   }
-  std::vector<std::string> name;
+  std::string name;
+  bool need_extract;
 };
 
 struct ValueSqlNode : public ExprSqlNode
@@ -79,8 +79,7 @@ struct ValueSqlNode : public ExprSqlNode
      return VALUE_EXPR;
   };
   RC set_name(std::string n){
-    if(name.empty())
-    name.push_back(n);
+    name = n;
     return RC::SUCCESS;
   }
 };
@@ -97,10 +96,10 @@ struct RelAttrSqlNode : public ExprSqlNode
   RC set_name(){
     if(name.empty()){
       if(!alias_name.empty())
-      name.push_back(alias_name);
+      name = alias_name;
     else if(relation_name.empty())
-      name.push_back(attribute_name);
-    else name.push_back(relation_name + '.' + attribute_name);
+      name = attribute_name;
+    else name = relation_name + '.' + attribute_name;
     }
     return RC::SUCCESS;
   }
@@ -125,8 +124,7 @@ struct ArithSqlNode : public ExprSqlNode
      return ARITHMATIC_EXPR; 
   };
   RC set_name(std::string n){
-    if(name.empty())
-    name.push_back(n);
+    name = n;
     return RC::SUCCESS;
   }
 };
@@ -135,15 +133,15 @@ struct AggrSqlNode : public ExprSqlNode{
   function_type func_type;
   std::unique_ptr<ExprSqlNode> son;
   std::string function_name;
-  AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {}
+  AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
+    need_extract = (t == function_type::AGGR_COUNT) ? false : son->need_extract;
+  }
   virtual ~AggrSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return AGGR_FUNC_EXPR; 
   };
   RC set_name(){
-    for(auto it = son->name.begin(); it != son->name.end(); ++it){
-      name.push_back(function_name + "(" + *it + ")");
-    };
+    name = function_name + "(" + son->name + ")";
     return RC::SUCCESS;
   }
 };
@@ -152,15 +150,15 @@ struct FuncSqlNode : public ExprSqlNode{
   function_type func_type;
   std::unique_ptr<ExprSqlNode> son;
   std::string function_name;
-  FuncSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {}
+  FuncSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
+    need_extract = son->need_extract;
+  }
   virtual ~FuncSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return FUNC_EXPR; 
   };
   RC set_name(){
-    for(auto it = son->name.begin(); it != son->name.end(); ++it){
-      name.push_back(function_name + "(" + *it + ")");
-    };
+    name = function_name + "(" + son->name + ")";
     return RC::SUCCESS;
   }
 };

@@ -27,7 +27,14 @@ SelectStmt::~SelectStmt()
   }
 }
 
-
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
+{
+  const TableMeta &table_meta = table->table_meta();
+  const int field_num = table_meta.field_num();
+  for (int i = table_meta.sys_field_num(); i < field_num; i++) {
+    field_metas.push_back(Field(table, table_meta.field(i)));
+  }
+}
 
 RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 {
@@ -67,32 +74,52 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   bool is_aggregate;
   for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
     ExprSqlNode &cur = *select_sql.expressions[i];
-    std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()));
-    if(build_result.second != RC::SUCCESS){
-       LOG_WARN("fail to build expression. error code = %d.", build_result.second);
-       return build_result.second;
-    }
-    ExprType expressionType = build_result.first->type();
-    if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC){
-      LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
-      return RC::INVALID_ARGUMENT;
-    }
-    if(i != static_cast<int>(select_sql.expressions.size()) - 1){
-      if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
-        LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
-      return RC::INVALID_ARGUMENT;
+    if(cur.need_extract){
+      int last_query_field = query_fields.size();
+      for (Table *table : tables) {
+        wildcard_fields(table, query_fields);
       }
-    }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
-
-    AggrFuncExpr* judger = (AggrFuncExpr*) build_result.first.get();
-    if(expressionType == ExprType::AGGRFUNC && cur.name.size() > 1 && judger->func_type() == AggrFuncExpr::Type::COUNT_FUNC){
-      AggrSqlNode* aggr = (AggrSqlNode*)&cur;
-      alias.push_back(aggr->function_name + "(*)");
+      int cur_query_field = query_fields.size();
+      for(int j = last_query_field; j < cur_query_field; ++j){
+        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j]);
+        if(build_result.second != RC::SUCCESS){
+          LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+          return build_result.second;
+        }
+        
+        ExprType expressionType = build_result.first->type();
+        if(i != static_cast<int>(select_sql.expressions.size()) - 1){
+          if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
+            LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+          return RC::INVALID_ARGUMENT;
+          }
+        }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
+        alias.push_back(cur.name);
+        expressions.push_back(std::move(build_result.first));
+      }
     }else {
-      for(auto it = cur.name.begin(); it != cur.name.end(); ++it)
-      alias.push_back(*it);
+      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr);
+      if(build_result.second != RC::SUCCESS){
+        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+        return build_result.second;
+      }
+      ExprType expressionType = build_result.first->type();
+      if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC){
+        LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+        return RC::INVALID_ARGUMENT;
+      }
+      if(i != static_cast<int>(select_sql.expressions.size()) - 1){
+        if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
+          LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+        return RC::INVALID_ARGUMENT;
+        }
+      }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
+
+      
+      alias.push_back(cur.name);
+      expressions.push_back(std::move(build_result.first));
     }
-    expressions.push_back(std::move(build_result.first));
+    
   }
 
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());

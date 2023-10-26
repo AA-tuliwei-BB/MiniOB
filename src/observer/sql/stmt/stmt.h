@@ -100,4 +100,5 @@ std::pair<std::unique_ptr<Expression>, RC> build_expression(ExprSqlNode* father,
 std::vector<Table *> &tables, 
 std::unordered_map<std::string, Table *> &table_map,
 std::vector<Field> &query_fields,
-std::string db_name);
+std::string db_name,
+Field* star_replacement);

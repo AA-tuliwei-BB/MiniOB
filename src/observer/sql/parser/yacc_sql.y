@@ -544,13 +544,13 @@ expression:
 
 complex_expr:
     MAX_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@1));      
+      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@1));     
     }
     | MIN_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@1));      
+      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@1));
     }
     | COUNT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@1));      
+      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@1));
     }
     | AVG_FUNC LBRACE complex_expr RBRACE{
       $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@1));
@@ -560,13 +560,13 @@ complex_expr:
     }
 
     | LENGTH_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, token_name(sql_string, &@1));      
+      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, token_name(sql_string, &@1)); 
     }
     | ROUND_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, token_name(sql_string, &@1));      
+      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, token_name(sql_string, &@1));
     }
     | DATE_FORMAT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));      
+      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));
     }
     | ID alias_attr {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
@@ -576,6 +576,7 @@ complex_expr:
         tmp->alias_name = $2;
         free($2);
       } else tmp->alias_name = "";
+      tmp->need_extract = false;
       free($1);
       $$ = tmp;
     }
@@ -587,6 +588,7 @@ complex_expr:
         tmp->alias_name = $4;
         free($4);
       } else tmp->alias_name = "";
+      tmp->need_extract = false;
       free($1);
       free($3);
       $$ = tmp;
@@ -596,31 +598,39 @@ complex_expr:
       attr->relation_name  = "";
       attr->attribute_name = "*";
       attr->alias_name = "";
+      attr->need_extract = true;
       $$ = attr;
     }
     | complex_expr '+' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::ADD, $1, $3, sql_string, &@$);
+      $$->need_extract = false;
     }
     | complex_expr '-' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::SUB, $1, $3, sql_string, &@$);
+      $$->need_extract = false;
     }
     | complex_expr '*' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::MUL, $1, $3, sql_string, &@$);
+      $$->need_extract = false;
     }
     | complex_expr '/' complex_expr {
       $$ = create_complex_expression(ArithSqlNode::Type::DIV, $1, $3, sql_string, &@$);
+      $$->need_extract = false;
     }
     | LBRACE complex_expr RBRACE {
       $$ = $2;
       $$->set_name(token_name(sql_string, &@$));
+      $$->need_extract = $2->need_extract;
     }
     | '-' complex_expr %prec UMINUS {
       $$ = create_complex_expression(ArithSqlNode::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
+      $$->need_extract = $2->need_extract;
     }
     | value
     {
       $$ = new ValueSqlNode(*$1);
       $$->set_name(token_name(sql_string, &@$));
+      $$->need_extract = false;
       delete $1;
     }
 
