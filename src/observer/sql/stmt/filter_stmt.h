@@ -28,24 +28,15 @@ struct FilterObj
 {
   bool is_attr;
   std::unique_ptr<Expression> expression;
+  FilterObj():is_attr(false), expression(nullptr) {}
+  FilterObj(std::unique_ptr<Expression> expr){
+    expression = std::move(expr);
+    is_attr = expression->is_attr();
+  }
 
   bool init(std::unique_ptr<Expression> expr){
-    switch (expr->type())
-    {
-    case ExprType::AGGRFUNC:
-    case ExprType::ARITHMETIC:
-    case ExprType::CAST:
-    case ExprType::VALUE:
-      /* code */
-      is_attr = false;
-      break;
-    case ExprType::FIELD:
-    case ExprType::FUNCTION:
-      is_attr = true;
-    default:
-      return false;
-    }
     expression = std::move(expr);
+    is_attr = expression->is_attr();
     return true;
   }
   

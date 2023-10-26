@@ -328,7 +328,11 @@ public:
   virtual ~ArithmeticExpr() = default;
 
   ExprType type() const override { return ExprType::ARITHMETIC; }
-  bool is_attr() const { return false; }
+  bool is_attr() const { 
+    if(arithmetic_type_ == Type::NEGATIVE)
+      return left_->is_attr();
+   else return left_->is_attr() || right_->is_attr();
+  }
   AttrType value_type() const override;
 
   RC get_value(const Tuple &tuple, Value &value) const override;
@@ -339,31 +343,31 @@ public:
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
 
-  std::string name() const
-  {
-    std::string left_name;
-    std::string right_name;
-    left_name = left_->name();
-    if (right_) right_name = right_->name();
-    switch (arithmetic_type_) {
-      case Type::ADD: {
-        return left_name + "+" + right_name;
-      } break;
-      case Type::SUB: {
-        return left_name + "-" + right_name;
-      } break;
-      case Type::MUL: {
-        return left_name + "*" + right_name;
-      } break;
-      case Type::DIV: {
-        return left_name + "/" + right_name;
-      } break;
-      case Type::NEGATIVE: {
-        return "-" + left_name;
-      }
-    }
-    return "error";
-  }
+  // std::string name() const
+  // {
+  //   std::string left_name;
+  //   std::string right_name;
+  //   left_name = left_->name();
+  //   if (right_) right_name = right_->name();
+  //   switch (arithmetic_type_) {
+  //     case Type::ADD: {
+  //       return left_name + "+" + right_name;
+  //     } break;
+  //     case Type::SUB: {
+  //       return left_name + "-" + right_name;
+  //     } break;
+  //     case Type::MUL: {
+  //       return left_name + "*" + right_name;
+  //     } break;
+  //     case Type::DIV: {
+  //       return left_name + "/" + right_name;
+  //     } break;
+  //     case Type::NEGATIVE: {
+  //       return "-" + left_name;
+  //     }
+  //   }
+  //   return "error";
+  // }
 
 private:
   RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;

@@ -119,13 +119,17 @@ std::unordered_map<std::string, Table *> &table_map,
 std::vector<Field> &query_fields,
 std::string db_name,
 Field* star_replacement){
+  if(father == nullptr)
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
   switch (father->get_type())
   {
   case ExprSqlNode::Type::REL_ATTR_EXPR:{
     RelAttrSqlNode *relation_attr = (RelAttrSqlNode *)father;
     if(star_replacement != nullptr){
-      relation_attr->ExprSqlNode::set_name(std::string(star_replacement->table_name()) + "." + std::string(star_replacement->field_name()));
-    }else relation_attr->set_name();
+      if(tables.size() == 1)
+      relation_attr->ExprSqlNode::set_name(std::string(star_replacement->field_name()));
+      else relation_attr->ExprSqlNode::set_name(std::string(star_replacement->table_name()) + "." + std::string(star_replacement->field_name()));
+    }else relation_attr->set_name(tables.size() == 1);
     if (common::is_blank(relation_attr->relation_name.c_str()) &&
         0 == strcmp(relation_attr->attribute_name.c_str(), "*")) {
       // for (Table *table : tables) {
@@ -257,7 +261,8 @@ Field* star_replacement){
   }
   break;
   case ExprSqlNode::Type::ARITHMATIC_EXPR:{
-    const ArithSqlNode &cur = *(ArithSqlNode*)father;
+    ArithSqlNode &cur = *(ArithSqlNode*)father;
+    cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> left_parse = 
     build_expression(cur.left.get(), tables, table_map, query_fields, db_name, star_replacement);
     if(left_parse.second != RC::SUCCESS){
@@ -267,7 +272,7 @@ Field* star_replacement){
 
     std::pair<std::unique_ptr<Expression>, RC> right_parse = 
     build_expression(cur.right.get(), tables, table_map, query_fields, db_name, star_replacement);
-    if(right_parse.second != RC::SUCCESS){
+    if(right_parse.second != RC::SUCCESS && cur.operation_type != ArithSqlNode::Type::NEGATIVE){
     LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
     return std::make_pair(std::unique_ptr<Expression>(nullptr), right_parse.second);
     }

@@ -312,10 +312,12 @@ RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
-  rc = right_->get_value(tuple, right_value);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
-    return rc;
+  if(arithmetic_type_ != Type::NEGATIVE){
+    rc = right_->get_value(tuple, right_value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
+      return rc;
+    }
   }
   return calc_value(left_value, right_value, value);
 }
@@ -401,12 +403,12 @@ RC AggrFuncExpr::add_value(const Tuple &tuple)
     return RC::SUCCESS;
   }
 
-  if (count_ == 0) {
+  if (count_++ == 0) {
     sum_.set_value(son_value);
     min_.set_value(son_value);
     max_.set_value(son_value);
+    return RC::SUCCESS;
   }
-  count_++;
 
   switch (son_value.attr_type())
   {

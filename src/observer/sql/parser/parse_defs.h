@@ -93,11 +93,11 @@ struct RelAttrSqlNode : public ExprSqlNode
   ExprSqlNode::Type get_type() const{
      return REL_ATTR_EXPR; 
   };
-  RC set_name(){
+  RC set_name(bool table_disable){
     if(name.empty()){
       if(!alias_name.empty())
       name = alias_name;
-    else if(relation_name.empty())
+    else if(relation_name.empty() || table_disable)
       name = attribute_name;
     else name = relation_name + '.' + attribute_name;
     }
@@ -118,13 +118,38 @@ struct ArithSqlNode : public ExprSqlNode
   std::unique_ptr<ExprSqlNode> right;
   ArithSqlNode::Type operation_type;
 
-  ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {}
+  ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {
+    if(operation_type == Type::NEGATIVE){
+      need_extract = left->need_extract;
+    }else need_extract = left->need_extract || right->need_extract;
+  }
   virtual ~ArithSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return ARITHMATIC_EXPR; 
   };
   RC set_name(std::string n){
     name = n;
+    return RC::SUCCESS;
+  }
+  RC set_name(){
+    if(!name.empty()) return RC::SUCCESS;
+    switch (operation_type) {
+      case Type::ADD: {
+        name =  left->name + "+" + right->name;
+      } break;
+      case Type::SUB: {
+         name =  left->name + "-" + right->name;
+      } break;
+      case Type::MUL: {
+         name =  left->name + "*" + right->name;
+      } break;
+      case Type::DIV: {
+         name =  left->name + "/" + right->name;
+      } break;
+      case Type::NEGATIVE: {
+         name =  "-" + left->name ;
+      }
+    }
     return RC::SUCCESS;
   }
 };

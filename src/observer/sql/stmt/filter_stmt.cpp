@@ -110,13 +110,11 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
   
 
-  FilterObj left, right;
-  left.init(std::move(left_parse.first));
-  right.init(std::move(right_parse.first));
-  filter_unit = new FilterUnit(left, right);
-  filter_unit->set_comp(comp);
+  FilterObj left(std::move(left_parse.first)), right(std::move(right_parse.first));
   left_attr = left.expression->value_type();
   right_attr = right.expression->value_type();
+  filter_unit = new FilterUnit(left, right);
+  filter_unit->set_comp(comp);
   // 检查两个类型是否能够比较
   if (!common::field_type_compare_compatible_table[left_attr][right_attr]) {
      // 不能比较的两个字段， 要把信息传给客户端
