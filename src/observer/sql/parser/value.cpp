@@ -262,7 +262,7 @@ int Value::get_int() const
             return 0;
         }
     }
-    case INTS: {
+    case INTS: case DATES:{
         return num_value_.int_value_;
     }
     case FLOATS: {
