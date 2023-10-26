@@ -363,7 +363,7 @@ AttrType AggrFuncExpr::value_type() const
   } break;
   case Type::COUNT_FUNC: {
     return INTS;
-  }
+  } 
   case Type::MIN_FUNC:
   case Type::MAX_FUNC:
   case Type::SUM_FUNC: {
@@ -434,7 +434,7 @@ RC AggrFuncExpr::add_value(const Tuple &tuple)
     if (max_.compare(son_value) < 0) {
       max_.set_value(son_value);
     }
-  }
+  } break;
 
   default:
     return RC::INTERNAL;

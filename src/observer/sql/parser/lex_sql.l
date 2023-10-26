@@ -78,8 +78,8 @@ QUOTE            [\'\"]
 {WHITE_SAPCE}                                        // ignore whitespace
 \n                                                   ;
 
-{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
-{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
+[\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
+[\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 {QUOTE}(1|2)?[0-9]{3}\-(0|1)?[0-9]\-[0-3]?[0-9]{QUOTE}  {
   int year, month, day;
   const int year_weight = 400 * 40, month_weight = 40;
