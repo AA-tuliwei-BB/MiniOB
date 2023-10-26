@@ -119,9 +119,10 @@ struct ArithSqlNode : public ExprSqlNode
   ArithSqlNode::Type operation_type;
 
   ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {
-    if(operation_type == Type::NEGATIVE){
-      need_extract = left->need_extract;
-    }else need_extract = left->need_extract || right->need_extract;
+    // if(operation_type == Type::NEGATIVE){
+    //   need_extract = left->need_extract;
+    // }else need_extract = left->need_extract || right->need_extract;
+    need_extract = false;
   }
   virtual ~ArithSqlNode() = default;
   ExprSqlNode::Type get_type() const{
@@ -159,7 +160,7 @@ struct AggrSqlNode : public ExprSqlNode{
   std::unique_ptr<ExprSqlNode> son;
   std::string function_name;
   AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
-    need_extract = (t == function_type::AGGR_COUNT) ? false : son->need_extract;
+    need_extract = false;
   }
   virtual ~AggrSqlNode() = default;
   ExprSqlNode::Type get_type() const{
@@ -176,7 +177,7 @@ struct FuncSqlNode : public ExprSqlNode{
   std::unique_ptr<ExprSqlNode> son;
   std::string function_name;
   FuncSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
-    need_extract = son->need_extract;
+    need_extract = false;
   }
   virtual ~FuncSqlNode() = default;
   ExprSqlNode::Type get_type() const{

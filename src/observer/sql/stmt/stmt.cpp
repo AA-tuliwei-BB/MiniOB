@@ -215,7 +215,7 @@ Field* star_replacement){
       LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), son_parse.second);
       return std::make_pair(std::unique_ptr<Expression>(nullptr), son_parse.second);
     }
-    if(!son_parse.first->is_attr()){
+    if(!son_parse.first->is_attr() || cur.func_type != function_type::AGGR_COUNT && son_parse.first->type() == ExprType::STAR){
       LOG_WARN("invalid argument type for aggregate function(id=%d). son expression type id=%d.", static_cast<int>(cur.func_type), static_cast<int>(son_parse.first->type()));
       return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
     }
@@ -235,7 +235,7 @@ Field* star_replacement){
       LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), son_parse.second);
       return std::make_pair(std::unique_ptr<Expression>(nullptr), son_parse.second);
     }
-    if(!son_parse.first->is_attr()){
+    if(!son_parse.first->is_attr() || son_parse.first->type() == ExprType::STAR){
       LOG_WARN("invalid argument type for non-aggregate function(id=%d). son expression type id=%d.", static_cast<int>(cur.func_type), static_cast<int>(son_parse.first->type()));
       return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
     }
@@ -265,16 +265,16 @@ Field* star_replacement){
     cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> left_parse = 
     build_expression(cur.left.get(), tables, table_map, query_fields, db_name, star_replacement);
-    if(left_parse.second != RC::SUCCESS){
+    if(left_parse.second != RC::SUCCESS || left_parse.first->type() == ExprType::STAR){
     LOG_WARN("Error when parsing arithmatic expression sql node's left son, error_code = %d.", left_parse.second);
-    return std::make_pair(std::unique_ptr<Expression>(nullptr), left_parse.second);
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), left_parse.second == RC::SUCCESS ? RC::INVALID_ARGUMENT : left_parse.second);
     }
 
     std::pair<std::unique_ptr<Expression>, RC> right_parse = 
     build_expression(cur.right.get(), tables, table_map, query_fields, db_name, star_replacement);
-    if(right_parse.second != RC::SUCCESS && cur.operation_type != ArithSqlNode::Type::NEGATIVE){
+    if(right_parse.second != RC::SUCCESS && cur.operation_type != ArithSqlNode::Type::NEGATIVE|| right_parse.first->type() == ExprType::STAR){
     LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
-    return std::make_pair(std::unique_ptr<Expression>(nullptr), right_parse.second);
+    return std::make_pair(std::unique_ptr<Expression>(nullptr), right_parse.second == RC::SUCCESS ? RC::INVALID_ARGUMENT : right_parse.second);
     }
     
     ArithmeticExpr::Type result_type;
