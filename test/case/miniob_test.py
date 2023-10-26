@@ -621,7 +621,7 @@ class EvalResult:
 class TestSuite:
 
   def __init__(self):
-    self.__report_only = True # 本次测试为了获取测试结果，不是为了校验结果
+    self.__report_only = False # 本次测试为了获取测试结果，不是为了校验结果
     self.__test_case_base_dir = "./test"
     self.__test_result_base_dir = "./result"
     self.__test_result_tmp_dir = "./result/tmp" # 生成的结果存放的临时目录
