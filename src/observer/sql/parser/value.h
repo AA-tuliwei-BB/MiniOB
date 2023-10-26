@@ -106,6 +106,7 @@ public:
     std::string get_string() const;
     bool get_boolean() const;
     bool is_null() const;
+    bool make_negative();
 
 private:
     AttrType attr_type_ = UNDEFINED;

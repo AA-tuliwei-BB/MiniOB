@@ -272,7 +272,7 @@ Field* star_replacement){
 
     std::pair<std::unique_ptr<Expression>, RC> right_parse = 
     build_expression(cur.right.get(), tables, table_map, query_fields, db_name, star_replacement);
-    if(right_parse.second != RC::SUCCESS && cur.operation_type != ArithSqlNode::Type::NEGATIVE|| right_parse.first->type() == ExprType::STAR){
+    if((right_parse.second != RC::SUCCESS || right_parse.first->type() == ExprType::STAR) && cur.operation_type != ArithSqlNode::Type::NEGATIVE){
     LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
     return std::make_pair(std::unique_ptr<Expression>(nullptr), right_parse.second == RC::SUCCESS ? RC::INVALID_ARGUMENT : right_parse.second);
     }

@@ -358,3 +358,18 @@ bool Value::get_boolean() const
 }
 
 bool Value::is_null() const { return this->attr_type_ == AttrType::NULLS; }
+
+bool Value::make_negative(){
+    switch (attr_type_) {
+        case INTS:
+            num_value_.int_value_ = -num_value_.int_value_;
+        break;
+        case FLOATS:
+            num_value_.float_value_ = -num_value_.float_value_;
+        break;
+        default:
+            LOG_WARN("type=%d cannot make negative.", attr_type_);
+            return false;
+    }
+    return true;
+}

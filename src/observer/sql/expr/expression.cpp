@@ -97,8 +97,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     if(comp_ == NOT_LIKE) result = !result;
     return rc;
   }
-  int cmp_result = left.compare(right);
   result = false;
+  if(left.is_null() || right.is_null()) return rc;
+  int cmp_result = left.compare(right);
   switch (comp_) {
     case EQUAL_TO: {
       result = (0 == cmp_result);

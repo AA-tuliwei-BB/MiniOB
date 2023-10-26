@@ -153,6 +153,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <number>              type
 %type <condition>           condition
 %type <value>               value
+%type <value>               value_in_expr
 %type <number>              number
 %type <comp>                comp_op
 %type <attr_infos>          attr_def_list
@@ -419,6 +420,10 @@ value:
       $$ = new Value((int)$1);
       @$ = @1;
     }
+    |'-' NUMBER{
+      $$ = new Value(-(int)$2);
+      @$ = @2;
+    }
     |FLOAT {
       $$ = new Value((float)$1);
       @$ = @1;
@@ -437,7 +442,30 @@ value:
       @$ = @1;
     }
     ;
-    
+
+value_in_expr:
+    NUMBER {
+      $$ = new Value((int)$1);
+      @$ = @1;
+    }
+    |FLOAT {
+      $$ = new Value((float)$1);
+      @$ = @1;
+    }
+    |SSS {
+      char *tmp = common::substr($1,1,strlen($1)-2);
+      $$ = new Value(tmp);
+      free(tmp);
+    }
+    |DATE {
+      $$ = new Value((date_t)$1);
+      @$ = @1;
+    }
+    |NULL_VAL {
+      $$ = new Value((null_t)0);
+      @$ = @1;
+    }
+    ;
 delete_stmt:    /*  delete 语句的语法解析树*/
     DELETE FROM ID where 
     {
@@ -533,7 +561,7 @@ expression:
     | '-' expression %prec UMINUS {
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
     }
-    | value {
+    | value_in_expr {
       $$ = new ValueExpr(*$1);
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
@@ -623,10 +651,14 @@ complex_expr:
       $$->need_extract = $2->need_extract;
     }
     | '-' complex_expr %prec UMINUS {
-      $$ = create_complex_expression(ArithSqlNode::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
+      if($2->get_type() == ExprSqlNode::Type::VALUE_EXPR){
+        ValueSqlNode* tmp = (ValueSqlNode*)$2;
+        tmp->val.make_negative();
+        $$ = (ExprSqlNode*)tmp;
+      }else $$ = create_complex_expression(ArithSqlNode::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
       $$->need_extract = $2->need_extract;
     }
-    | value
+    | value_in_expr
     {
       $$ = new ValueSqlNode(*$1);
       $$->set_name(token_name(sql_string, &@$));
