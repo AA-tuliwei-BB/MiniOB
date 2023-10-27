@@ -23,7 +23,7 @@ public:
   ExprType type() const override { return ExprType::FUNCTION; }
 
   AttrType value_type() const override;
-  bool is_attr() const { return false; }
+  bool is_attr() const { return true; }
   RC get_value(const Tuple &tuple, Value &value) const override;
   RC try_get_value(Value &value) const override;
 
