@@ -149,7 +149,12 @@ public:
     return null_[field_id];
   }
 
-  char *get_field_date(int field_id)
+  char *get_field_data(int field_id)
+  {
+    return data_ + offset_[field_id];
+  }
+
+  const char *get_field_data(int field_id) const
   {
     return data_ + offset_[field_id];
   }

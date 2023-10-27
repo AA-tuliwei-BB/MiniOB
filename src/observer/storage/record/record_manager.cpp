@@ -94,6 +94,7 @@ RC ExtraRecord::from_record(const Record &record, const TableMeta &table_meta)
   } else {
     len = data_start_offset() + data_len;
   }
+  return RC::SUCCESS;
 }
 
 RC ExtraRecord::to_record(DiskBufferPool *disk_buffer_pool_, const TableMeta *table_meta_, bool readonly, Record *rec)
