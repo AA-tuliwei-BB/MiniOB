@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/rc.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
+#include "common/lang/comparator.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
@@ -28,7 +29,7 @@ FilterStmt::~FilterStmt()
 }
 
 RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-    const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt)
+  std::vector<ConditionSqlNode *>& conditions, int condition_num, FilterStmt *&stmt)
 {
   RC rc = RC::SUCCESS;
   stmt = nullptr;
@@ -36,7 +37,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
   FilterStmt *tmp_stmt = new FilterStmt();
   for (int i = 0; i < condition_num; i++) {
     FilterUnit *filter_unit = nullptr;
-    rc = create_filter_unit(db, default_table, tables, conditions[i], filter_unit);
+    rc = create_filter_unit(db, default_table, tables, *conditions[i], filter_unit);
     if (rc != RC::SUCCESS) {
       delete tmp_stmt;
       LOG_WARN("failed to create filter unit. condition index=%d", i);
@@ -78,17 +79,9 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
 }
 
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-    const ConditionSqlNode &condition, FilterUnit *&filter_unit)
+    ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
   RC rc = RC::SUCCESS;
-  const bool field_type_compare_compatible_table[BOOLEANS + 1][BOOLEANS + 1] = {
-    0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 1, 1,
-    0, 1, 1, 0, 1, 1,
-    0, 0, 0, 1, 0, 1,
-    0, 1, 1, 0, 1, 1,
-    0, 1, 1, 1, 1, 1,
-  };
   int left_attr, right_attr;
 
   CompOp comp = condition.comp;
@@ -97,53 +90,36 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     return RC::INVALID_ARGUMENT;
   }
 
-  filter_unit = new FilterUnit;
+  
 
-  if (condition.left_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    FilterObj filter_obj;
-    filter_obj.init_attr(Field(table, field));
-    filter_unit->set_left(filter_obj);
-    left_attr = filter_obj.field.attr_type();
-  } else {
-    FilterObj filter_obj;
-    filter_obj.init_value(condition.left_value);
-    filter_unit->set_left(filter_obj);
-    left_attr = filter_obj.value.attr_type();
+  std::vector<Table*> table_wrap;
+  std::vector<Field> field_wrap;
+  table_wrap.push_back(default_table);
+  std::pair<std::unique_ptr<Expression>, RC> left_parse = 
+  build_expression(condition.left_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr);
+  if(left_parse.second != RC::SUCCESS){
+  LOG_WARN("Error when parsing arithmatic expression sql node's left son, error_code = %d.", left_parse.second);
+  return left_parse.second;
   }
 
-  if (condition.right_is_attr) {
-    Table *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    FilterObj filter_obj;
-    filter_obj.init_attr(Field(table, field));
-    filter_unit->set_right(filter_obj);
-    right_attr = filter_obj.field.attr_type();
-  } else {
-    FilterObj filter_obj;
-    filter_obj.init_value(condition.right_value);
-    filter_unit->set_right(filter_obj);
-    right_attr = filter_obj.value.attr_type();
+  std::pair<std::unique_ptr<Expression>, RC> right_parse = 
+  build_expression(condition.right_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr);
+  if(right_parse.second != RC::SUCCESS){
+  LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
+  return right_parse.second;
   }
+  
 
+  FilterObj left(std::move(left_parse.first)), right(std::move(right_parse.first));
+  left_attr = left.expression->value_type();
+  right_attr = right.expression->value_type();
+  filter_unit = new FilterUnit(left, right);
   filter_unit->set_comp(comp);
-
   // 检查两个类型是否能够比较
-  if (!field_type_compare_compatible_table[left_attr][right_attr]) {
+  if (!common::field_type_compare_compatible_table[left_attr][right_attr]) {
      // 不能比较的两个字段， 要把信息传给客户端
      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
   }
-  
+
   return rc;
 }

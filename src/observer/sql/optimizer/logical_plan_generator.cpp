@@ -25,6 +25,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/project_logical_operator.h"
 #include "sql/operator/explain_logical_operator.h"
 #include "sql/operator/update_logical_operator.h"
+#include "sql/operator/aggrfunc_logical_operator.h"
+#include "sql/operator/expression_logical_operator.h"
 
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/calc_stmt.h"
@@ -116,18 +118,37 @@ RC LogicalPlanGenerator::create_plan(
     return rc;
   }
 
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
-  if (predicate_oper) {
-    if (table_oper) {
-      predicate_oper->add_child(std::move(table_oper));
+  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator());
+  if (select_stmt->is_aggregate()) {
+    // 聚合函数以聚合算子为根
+    unique_ptr<LogicalOperator> aggr_oper(new AggrFuncLogicalOperator(std::move(select_stmt->expression())));
+    if (predicate_oper) {
+      if (table_oper) {
+        predicate_oper->add_child(std::move(table_oper));
+      }
+      aggr_oper->add_child(std::move(predicate_oper));
+    } else {
+      if (table_oper) {
+        aggr_oper->add_child(std::move(table_oper));
+      }
     }
-    project_oper->add_child(std::move(predicate_oper));
-  } else {
-    if (table_oper) {
-      project_oper->add_child(std::move(table_oper));
-    }
-  }
+    project_oper->add_child(std::move(aggr_oper));
 
+  } else {
+    // 普通表达式以表达式算子为根
+    unique_ptr<LogicalOperator> expr_oper(new ExpressionLogicalOperator(std::move(select_stmt->expression())));
+    if (predicate_oper) {
+      if (table_oper) {
+        predicate_oper->add_child(std::move(table_oper));
+      }
+      expr_oper->add_child(std::move(predicate_oper));
+    } else {
+      if (table_oper) {
+        expr_oper->add_child(std::move(table_oper));
+      }
+    }
+    project_oper->add_child(std::move(expr_oper));
+  }
   logical_operator.swap(project_oper);
   return RC::SUCCESS;
 }
@@ -137,17 +158,13 @@ RC LogicalPlanGenerator::create_plan(
 {
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
-  for (const FilterUnit *filter_unit : filter_units) {
-    const FilterObj &filter_obj_left = filter_unit->left();
-    const FilterObj &filter_obj_right = filter_unit->right();
+  for (FilterUnit *filter_unit : filter_units) {
+    FilterObj filter_obj_left = filter_unit->left();
+    FilterObj filter_obj_right = filter_unit->right();
 
-    unique_ptr<Expression> left(filter_obj_left.is_attr
-                                         ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
-                                         : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+    unique_ptr<Expression> left(std::move(filter_obj_left.expression));
 
-    unique_ptr<Expression> right(filter_obj_right.is_attr
-                                          ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
-                                          : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+    unique_ptr<Expression> right(std::move(filter_obj_right.expression));
 
     ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
     cmp_exprs.emplace_back(cmp_expr);

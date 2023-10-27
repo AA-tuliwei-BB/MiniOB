@@ -21,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
 
+
 class FieldMeta;
 class FilterStmt;
 class Db;
@@ -42,7 +43,7 @@ public:
   }
 
 public:
-  static RC create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt);
+  static RC create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt);
 
 public:
   const std::vector<Table *> &tables() const
@@ -53,13 +54,30 @@ public:
   {
     return query_fields_;
   }
+  const std::vector<std::string> &alias() const
+  {
+    return alias_;
+  }
+  std::vector<std::unique_ptr<Expression>> &expression()
+  {
+    return expressions_;
+  }
   FilterStmt *filter_stmt() const
   {
     return filter_stmt_;
   }
+  bool is_aggregate() const
+  {
+    return is_aggregate_;
+  }
 
 private:
+  bool is_aggregate_;
+  std::vector<std::string> alias_;
+  std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   FilterStmt *filter_stmt_ = nullptr;
+
+  
 };

@@ -27,28 +27,30 @@ class FieldMeta;
 struct FilterObj 
 {
   bool is_attr;
-  Field field;
-  Value value;
-
-  void init_attr(const Field &field)
-  {
-    is_attr = true;
-    this->field = field;
+  std::unique_ptr<Expression> expression;
+  FilterObj():is_attr(false), expression(nullptr) {}
+  FilterObj(std::unique_ptr<Expression> expr){
+    expression = std::move(expr);
+    is_attr = expression->is_attr();
   }
 
-  void init_value(const Value &value)
-  {
-    is_attr = false;
-    this->value = value;
+  bool init(std::unique_ptr<Expression> expr){
+    expression = std::move(expr);
+    is_attr = expression->is_attr();
+    return true;
   }
+  
 };
 
 class FilterUnit 
 {
 public:
   FilterUnit() = default;
-  ~FilterUnit()
-  {}
+  FilterUnit(FilterObj &l, FilterObj &r){
+    left_ = std::move(l);
+    right_ = std::move(r);
+  }
+  ~FilterUnit() = default;
 
   void set_comp(CompOp comp)
   {
@@ -60,22 +62,22 @@ public:
     return comp_;
   }
 
-  void set_left(const FilterObj &obj)
-  {
-    left_ = obj;
-  }
-  void set_right(const FilterObj &obj)
-  {
-    right_ = obj;
-  }
+  // void set_left(FilterObj &obj)
+  // {
+  //   left_ = obj;
+  // }
+  // void set_right(FilterObj &obj)
+  // {
+  //   right_ = obj;
+  // }
 
-  const FilterObj &left() const
+  FilterObj left()
   {
-    return left_;
+    return std::move(left_);
   }
-  const FilterObj &right() const
+  FilterObj right()
   {
-    return right_;
+    return std::move(right_);
   }
 
 private:
@@ -102,10 +104,10 @@ public:
 
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-      const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt);
+      std::vector<ConditionSqlNode *>& conditions, int condition_num, FilterStmt *&stmt);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-      const ConditionSqlNode &condition, FilterUnit *&filter_unit);
+      ConditionSqlNode &condition, FilterUnit *&filter_unit);
 
 private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系

@@ -78,8 +78,8 @@ QUOTE            [\'\"]
 {WHITE_SAPCE}                                        // ignore whitespace
 \n                                                   ;
 
-[\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
-[\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
+{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
+{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 {QUOTE}(1|2)?[0-9]{3}\-(0|1)?[0-9]\-[0-3]?[0-9]{QUOTE}  {
   int year, month, day;
   const int year_weight = 400 * 40, month_weight = 40;
@@ -105,11 +105,21 @@ SHOW                                    RETURN_TOKEN(SHOW);
 SYNC                                    RETURN_TOKEN(SYNC);
 SELECT                                  RETURN_TOKEN(SELECT);
 CALC                                    RETURN_TOKEN(CALC);
+MAX                                     RETURN_TOKEN(MAX_FUNC);
+MIN                                     RETURN_TOKEN(MIN_FUNC);
+COUNT                                   RETURN_TOKEN(COUNT_FUNC);
+AVG                                     RETURN_TOKEN(AVG_FUNC);
+SUM                                     RETURN_TOKEN(SUM_FUNC);
+LENGTH                                  RETURN_TOKEN(LENGTH_FUNC);
+DATE_FORMAT                             RETURN_TOKEN(DATE_FORMAT_FUNC);
+ROUND                                   RETURN_TOKEN(ROUND_FUNC);
 FROM                                    RETURN_TOKEN(FROM);
 WHERE                                   RETURN_TOKEN(WHERE);
-NOT{WHITE_SAPCE}LIKE                    RETURN_TOKEN(NOT_LK);
+AS                                      RETURN_TOKEN(AS);
 LIKE                                    RETURN_TOKEN(LK);
+NULL                                    RETURN_TOKEN(NULL_VAL);
 AND                                     RETURN_TOKEN(AND);
+NOT                                     RETURN_TOKEN(NOT);
 INSERT                                  RETURN_TOKEN(INSERT);
 INTO                                    RETURN_TOKEN(INTO);
 VALUES                                  RETURN_TOKEN(VALUES);

@@ -16,6 +16,8 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/rc.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/expr/expression.h"
+#include "sql/expr/func_expr.h"
 
 class Db;
 
@@ -87,3 +89,16 @@ public:
 
 private:
 };
+
+/**
+ * @brief 将表达式的sqlnode解析成表达式
+ * @defgroup Statement
+ * @file stmt.h
+ */
+
+std::pair<std::unique_ptr<Expression>, RC> build_expression(ExprSqlNode* father,
+std::vector<Table *> &tables, 
+std::unordered_map<std::string, Table *> &table_map,
+std::vector<Field> &query_fields,
+std::string db_name,
+Field* star_replacement);

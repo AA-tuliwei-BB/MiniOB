@@ -1,0 +1,46 @@
+#pragma once
+
+#include "sql/operator/physical_operator.h"
+
+/**
+ * @brief 表达式物理算子
+ * @ingroup PhysicalOperator
+ */
+class ExpressionPhysicalOperator : public PhysicalOperator
+{
+public:
+  ExpressionPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
+      : expressions_(std::move(expressions)), tuple_(expressions_)
+  {}
+
+  virtual ~ExpressionPhysicalOperator() = default;
+
+  /*
+    void add_expressions(std::vector<std::unique_ptr<Expression>> &&expressions)
+    {
+      expressions_ = std::move(expressions);
+    }
+    void add_projection(const Table *table, const FieldMeta *field);
+  */
+
+  PhysicalOperatorType type() const override
+  {
+    return PhysicalOperatorType::EXPRESSION;
+  }
+
+  RC open(Trx *trx) override;
+  RC next() override;
+  RC close() override;
+
+  int cell_num() const
+  {
+    return tuple_.cell_num();
+  }
+
+  Tuple *current_tuple() override;
+
+private:
+  // ProjectTuple tuple_;
+  std::vector<std::unique_ptr<Expression>> expressions_;
+  ExpressionTuple tuple_;
+};

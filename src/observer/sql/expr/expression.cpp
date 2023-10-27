@@ -97,8 +97,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     if(comp_ == NOT_LIKE) result = !result;
     return rc;
   }
-  int cmp_result = left.compare(right);
   result = false;
+  if(left.is_null() || right.is_null()) return rc;
+  int cmp_result = left.compare(right);
   switch (comp_) {
     case EQUAL_TO: {
       result = (0 == cmp_result);
@@ -234,6 +235,11 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
 
   const AttrType target_type = value_type();
 
+  if (left_value.is_null() || right_value.is_null()) {
+    value.set_null();
+    return RC::SUCCESS;
+  }
+
   switch (arithmetic_type_) {
     case Type::ADD: {
       if (target_type == AttrType::INTS) {
@@ -262,15 +268,17 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
     case Type::DIV: {
       if (target_type == AttrType::INTS) {
         if (right_value.get_int() == 0) {
+          value.set_null();
           // NOTE: 设置为整数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为整数最大值。
-          value.set_int(numeric_limits<int>::max());
+          // value.set_int(numeric_limits<int>::max());
         } else {
           value.set_int(left_value.get_int() / right_value.get_int());
         }
       } else {
         if (right_value.get_float() > -EPSILON && right_value.get_float() < EPSILON) {
+          value.set_null();
           // NOTE: 设置为浮点数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为浮点数最大值。
-          value.set_float(numeric_limits<float>::max());
+          // value.set_float(numeric_limits<float>::max());
         } else {
           value.set_float(left_value.get_float() / right_value.get_float());
         }
@@ -305,10 +313,12 @@ RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
-  rc = right_->get_value(tuple, right_value);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
-    return rc;
+  if(arithmetic_type_ != Type::NEGATIVE){
+    rc = right_->get_value(tuple, right_value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
+      return rc;
+    }
   }
   return calc_value(left_value, right_value, value);
 }
@@ -339,14 +349,14 @@ RC ArithmeticExpr::try_get_value(Value &value) const
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-AggrFunctionExpr::AggrFunctionExpr(Type type, Expression *son) : func_type_(type), son_(son) { count_ = 0; }
+AggrFuncExpr::AggrFuncExpr(Type type, Expression *son) : func_type_(type), son_(son) { count_ = 0; }
 
-AggrFunctionExpr::AggrFunctionExpr(Type type, std::unique_ptr<Expression> son) : func_type_(type), son_(std::move(son))
+AggrFuncExpr::AggrFuncExpr(Type type, std::unique_ptr<Expression> son) : func_type_(type), son_(std::move(son))
 {
   count_ = 0;
 }
 
-AttrType AggrFunctionExpr::value_type() const
+AttrType AggrFuncExpr::value_type() const
 {
   switch (func_type_) {
   case Type::AVG_FUNC : {
@@ -354,7 +364,7 @@ AttrType AggrFunctionExpr::value_type() const
   } break;
   case Type::COUNT_FUNC: {
     return INTS;
-  }
+  } 
   case Type::MIN_FUNC:
   case Type::MAX_FUNC:
   case Type::SUM_FUNC: {
@@ -366,11 +376,20 @@ AttrType AggrFunctionExpr::value_type() const
   }
 }
 
-RC AggrFunctionExpr::add_value(const Tuple &tuple)
+RC AggrFuncExpr::add_value(const Tuple &tuple)
 {
   RC rc = RC::SUCCESS;
-  Value son_value;
 
+  if (son_->type() == ExprType::STAR) {
+    if (func_type_ == Type::COUNT_FUNC) {
+      count_++;
+      return rc;
+    } else {
+      return RC::INTERNAL;
+    }
+  }
+
+  Value son_value;
   rc = son_->get_value(tuple, son_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of son expression. rc=%s", strrc(rc));
@@ -385,12 +404,12 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
     return RC::SUCCESS;
   }
 
-  if (count_ == 0) {
+  if (count_++ == 0) {
     sum_.set_value(son_value);
     min_.set_value(son_value);
     max_.set_value(son_value);
+    return RC::SUCCESS;
   }
-  count_++;
 
   switch (son_value.attr_type())
   {
@@ -407,7 +426,7 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
   case CHARS: {
     min_.set_string(std::min(min_.get_string(), son_value.get_string()).c_str());
     max_.set_string(std::max(max_.get_string(), son_value.get_string()).c_str());
-  }
+  } break;
   case DATES: {
     sum_.set_int(sum_.get_int() + son_value.get_int());
     if (min_.compare(son_value) > 0) {
@@ -416,7 +435,7 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
     if (max_.compare(son_value) < 0) {
       max_.set_value(son_value);
     }
-  }
+  } break;
 
   default:
     return RC::INTERNAL;
@@ -424,7 +443,7 @@ RC AggrFunctionExpr::add_value(const Tuple &tuple)
   return rc;
 }
 
-RC AggrFunctionExpr::get_value(Value &value)
+RC AggrFuncExpr::get_value(Value &value) const
 {
   if (count_ == 0 && func_type_ != Type::COUNT_FUNC) {
     value.set_null();
@@ -467,7 +486,7 @@ RC AggrFunctionExpr::get_value(Value &value)
   return RC::SUCCESS;
 }
 
-RC AggrFunctionExpr::try_get_value(Value &value) const
+RC AggrFuncExpr::try_get_value(Value &value) const
 {
   Value son_value;
   RC rc = son_->try_get_value(son_value);

@@ -33,7 +33,7 @@ class Tuple;
  * @brief 表达式类型
  * @ingroup Expression
  */
-enum class ExprType 
+enum class ExprType
 {
   NONE,
   STAR,         ///< 星号，表示所有字段
@@ -43,7 +43,9 @@ enum class ExprType
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
-  AGGRFUNC,   ///< 聚合函数
+  AGGRFUNC,     ///< 聚合函数
+  FUNCTION,     ///< 普通函数
+  ERROR,        ///< 未成功解析的表达式
 };
 
 /**
@@ -88,12 +90,14 @@ public:
    * @details 一个表达式运算出结果后，只有一个值
    */
   virtual AttrType value_type() const = 0;
+  
 
   /**
    * @brief 表达式的名字，比如是字段名称，或者用户在执行SQL语句时输入的内容
    */
   virtual std::string name() const { return name_; }
   virtual void set_name(std::string name) { name_ = name; }
+  virtual bool is_attr() const = 0;
 
 private:
   std::string  name_;
@@ -116,6 +120,7 @@ public:
 
   ExprType type() const override { return ExprType::FIELD; }
   AttrType value_type() const override { return field_.attr_type(); }
+  bool is_attr() const { return true; }
 
   Field &field() { return field_; }
 
@@ -127,8 +132,22 @@ public:
 
   RC get_value(const Tuple &tuple, Value &value) const override;
 
+  void set_multi_table(bool multi_talbe) { multi_table_ = multi_talbe; }
+
+  std::string name() const
+  {
+    std::string field_name_ = table_name();
+    if (!multi_table_) {
+      std::string table_name_ = table_name();
+      return table_name_ + "." + field_name_;
+    } else {
+      return field_name_;
+    }
+  }
+
 private:
   Field field_;
+  bool multi_table_;
 };
 
 /**
@@ -151,13 +170,36 @@ public:
 
   AttrType value_type() const override { return value_.attr_type(); }
 
+  bool is_attr() const { return false; }
+
   void get_value(Value &value) const { value = value_; }
 
   const Value &get_value() const { return value_; }
 
+  std::string name() const
+  {
+    return value_.to_string();
+  }
+
 private:
   Value value_;
 };
+
+/**
+ * @brief 星号表达式
+ * @ingroup Expression
+ */
+class StarExpr : public Expression {
+public:
+  StarExpr() {set_name("*"); };
+  ~StarExpr() = default;
+  RC get_value(const Tuple &tuple, Value &value) const {return RC::UNIMPLENMENT; }
+  ExprType type() const { return ExprType::STAR; }
+  AttrType value_type() const {return AttrType::UNDEFINED; };
+  bool is_attr() const { return true; }
+
+};
+
 
 /**
  * @brief 类型转换表达式
@@ -176,6 +218,8 @@ public:
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   RC try_get_value(Value &value) const override;
+
+  bool is_attr() const { return false; }
 
   AttrType value_type() const override { return cast_type_; }
 
@@ -204,11 +248,13 @@ public:
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   AttrType value_type() const override { return BOOLEANS; }
+  bool is_attr() const { return false; }
 
   CompOp comp() const { return comp_; }
 
   std::unique_ptr<Expression> &left()  { return left_;  }
   std::unique_ptr<Expression> &right() { return right_; }
+
 
   /**
    * 尝试在没有tuple的情况下获取当前表达式的值
@@ -249,7 +295,7 @@ public:
   ExprType type() const override { return ExprType::CONJUNCTION; }
 
   AttrType value_type() const override { return BOOLEANS; }
-
+  bool is_attr() const { return false; }
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   Type conjunction_type() const { return conjunction_type_; }
@@ -282,7 +328,11 @@ public:
   virtual ~ArithmeticExpr() = default;
 
   ExprType type() const override { return ExprType::ARITHMETIC; }
-
+  bool is_attr() const { 
+    if(arithmetic_type_ == Type::NEGATIVE)
+      return left_->is_attr();
+   else return left_->is_attr() || right_->is_attr();
+  }
   AttrType value_type() const override;
 
   RC get_value(const Tuple &tuple, Value &value) const override;
@@ -293,6 +343,32 @@ public:
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
 
+  // std::string name() const
+  // {
+  //   std::string left_name;
+  //   std::string right_name;
+  //   left_name = left_->name();
+  //   if (right_) right_name = right_->name();
+  //   switch (arithmetic_type_) {
+  //     case Type::ADD: {
+  //       return left_name + "+" + right_name;
+  //     } break;
+  //     case Type::SUB: {
+  //       return left_name + "-" + right_name;
+  //     } break;
+  //     case Type::MUL: {
+  //       return left_name + "*" + right_name;
+  //     } break;
+  //     case Type::DIV: {
+  //       return left_name + "/" + right_name;
+  //     } break;
+  //     case Type::NEGATIVE: {
+  //       return "-" + left_name;
+  //     }
+  //   }
+  //   return "error";
+  // }
+
 private:
   RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;
   
@@ -302,7 +378,7 @@ private:
   std::unique_ptr<Expression> right_;
 };
 
-class AggrFunctionExpr : public Expression
+class AggrFuncExpr : public Expression
 {
 public:
   enum class Type {
@@ -314,21 +390,48 @@ public:
   };
 
 public:
-  AggrFunctionExpr(Type type, Expression *son);
-  AggrFunctionExpr(Type type, std::unique_ptr<Expression> son);
+  AggrFuncExpr(Type type, Expression *son);
+  AggrFuncExpr(Type type, std::unique_ptr<Expression> son);
 
   ExprType type() const override { return ExprType::AGGRFUNC; }
-  virtual ~AggrFunctionExpr() = default;
+  virtual ~AggrFuncExpr() = default;
 
   AttrType value_type() const override;
+  bool is_attr() const { return false; }
 
   RC add_value(const Tuple &tuple);
-  RC get_value(Value &value);
+  RC get_value(Value &value) const;
+  RC get_value(const Tuple &tuple, Value &value) const { return RC::UNIMPLENMENT; }
   RC try_get_value(Value &value) const override;
 
   Type func_type() const { return func_type_; }
 
   std::unique_ptr<Expression> &son() { return son_; }
+
+  std::string name() const
+  {
+    std::string son_name = son_->name();
+    std::string func_name;
+    switch (func_type_) {
+      case Type::AVG_FUNC: {
+        func_name = "avg";
+      } break;
+      case Type::COUNT_FUNC: {
+        func_name = "count";
+      } break;
+      case Type::MAX_FUNC: {
+        func_name = "max";
+      } break;
+      case Type::MIN_FUNC: {
+        func_name = "min";
+      } break;
+      case Type::SUM_FUNC: {
+        func_name = "sum";
+      } break;
+      default: break;
+    }
+    return func_name + "(" + son_name + ")";
+  }
 
 private:
   Type func_type_;

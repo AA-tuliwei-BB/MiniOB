@@ -98,7 +98,8 @@ private:
                 }
             }
             rc = RC::VARIABLE_NOT_VALID;
-        }
+        } else if(var_value.attr_type() == AttrType::NULLS)
+            bool_value = false;
 
         return rc;
     }

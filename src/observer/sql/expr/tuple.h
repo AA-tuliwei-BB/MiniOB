@@ -255,20 +255,20 @@ public:
   }
   int cell_num() const override
   {
-    return speces_.size();
+    return tuple_->cell_num();
   }
 
   RC cell_at(int index, Value &cell) const override
   {
-    if (index < 0 || index >= static_cast<int>(speces_.size())) {
+    if (index < 0 || index >= static_cast<int>(tuple_->cell_num())) {
       return RC::INTERNAL;
     }
     if (tuple_ == nullptr) {
       return RC::INTERNAL;
     }
-
-    const TupleCellSpec *spec = speces_[index];
-    return tuple_->find_cell(*spec, cell);
+    return tuple_->cell_at(index, cell);
+    //const TupleCellSpec *spec = speces_[index];
+    //return tuple_->find_cell(*spec, cell);
   }
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override
@@ -303,10 +303,26 @@ public:
   {
   }
 
+  void set_child_tuple(Tuple* tuple)
+  {
+    this->child_tuple_ = tuple;
+  }
+
   int cell_num() const override
   {
     return expressions_.size();
   }
+
+/*
+  RC cell_at(int index, const Tuple &tuple, Value& cell) const
+  {
+    if (index < 0 || index >= static_cast<int>(expressions_.size())) {
+      return RC::INTERNAL;
+    }
+
+    const Expression *expr = expressions_[index].get();
+    return expr->get_value(tuple, cell);
+  }*/
 
   RC cell_at(int index, Value &cell) const override
   {
@@ -315,7 +331,14 @@ public:
     }
 
     const Expression *expr = expressions_[index].get();
-    return expr->try_get_value(cell);
+    if (expr->type() == ExprType::AGGRFUNC) {
+      const AggrFuncExpr *aggrfunc_expr = static_cast<const AggrFuncExpr *>(expr);
+      return aggrfunc_expr->get_value(cell);
+    } else if (child_tuple_ != nullptr) {
+      return expr->get_value(*child_tuple_, cell);
+    } else {
+      return expr->try_get_value(cell);
+    }
   }
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override
@@ -328,9 +351,9 @@ public:
     return RC::NOTFOUND;
   }
 
-
 private:
   const std::vector<std::unique_ptr<Expression>> &expressions_;
+  Tuple *child_tuple_ = nullptr;
 };
 
 /**

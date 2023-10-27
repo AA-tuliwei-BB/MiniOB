@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "sql/parser/value.h"
+#include "common/rc.h"
 
 class Expression;
 
@@ -34,10 +35,158 @@ class Expression;
  * Rel -> Relation
  * Attr -> Attribute
  */
-struct RelAttrSqlNode
+
+enum function_type{
+  NO_FUNCTION,
+  AGGR_MAX,
+  AGGR_MIN,
+  AGGR_COUNT,
+  AGGR_AVG,
+  AGGR_SUM,
+  FUNC_LENGTH,
+  FUNC_ROUND,
+  FUNC_DATE_FORMAT,
+};
+
+
+
+struct ExprSqlNode{
+  enum Type{
+  VALUE_EXPR,
+  REL_ATTR_EXPR,
+  FUNC_EXPR,
+  AGGR_FUNC_EXPR,
+  ARITHMATIC_EXPR,
+};
+  ExprSqlNode() = default;
+  virtual ~ExprSqlNode() = default;
+
+  virtual ExprSqlNode::Type get_type() const = 0;
+  virtual RC set_name(std::string n){
+    name = n;
+    return RC::SUCCESS;
+  }
+  std::string name;
+  bool need_extract;
+};
+
+struct ValueSqlNode : public ExprSqlNode
+{
+  Value val;
+  ValueSqlNode(Value v):val(v) {}
+  virtual ~ValueSqlNode() = default;
+  ExprSqlNode::Type get_type() const{
+     return VALUE_EXPR;
+  };
+  RC set_name(std::string n){
+    name = n;
+    return RC::SUCCESS;
+  }
+};
+
+struct RelAttrSqlNode : public ExprSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
+  std::string alias_name;
+
+  ExprSqlNode::Type get_type() const{
+     return REL_ATTR_EXPR; 
+  };
+  RC set_name(bool table_disable){
+    if(name.empty()){
+      if(!alias_name.empty())
+      name = alias_name;
+    else if(relation_name.empty() || table_disable)
+      name = attribute_name;
+    else name = relation_name + '.' + attribute_name;
+    }
+    return RC::SUCCESS;
+  }
+};
+
+struct ArithSqlNode : public ExprSqlNode
+{
+  enum class Type {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    NEGATIVE,
+  };
+  std::unique_ptr<ExprSqlNode> left;
+  std::unique_ptr<ExprSqlNode> right;
+  ArithSqlNode::Type operation_type;
+
+  ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {
+    // if(operation_type == Type::NEGATIVE){
+    //   need_extract = left->need_extract;
+    // }else need_extract = left->need_extract || right->need_extract;
+    need_extract = false;
+  }
+  virtual ~ArithSqlNode() = default;
+  ExprSqlNode::Type get_type() const{
+     return ARITHMATIC_EXPR; 
+  };
+  RC set_name(std::string n){
+    name = n;
+    return RC::SUCCESS;
+  }
+  RC set_name(){
+    if(!name.empty()) return RC::SUCCESS;
+    switch (operation_type) {
+      case Type::ADD: {
+        name =  left->name + "+" + right->name;
+      } break;
+      case Type::SUB: {
+         name =  left->name + "-" + right->name;
+      } break;
+      case Type::MUL: {
+         name =  left->name + "*" + right->name;
+      } break;
+      case Type::DIV: {
+         name =  left->name + "/" + right->name;
+      } break;
+      case Type::NEGATIVE: {
+         name =  "-" + left->name ;
+      }
+    }
+    return RC::SUCCESS;
+  }
+};
+
+struct AggrSqlNode : public ExprSqlNode{
+  function_type func_type;
+  std::unique_ptr<ExprSqlNode> son;
+  std::string function_name;
+  AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
+    need_extract = false;
+  }
+  virtual ~AggrSqlNode() = default;
+  ExprSqlNode::Type get_type() const{
+     return AGGR_FUNC_EXPR; 
+  };
+  RC set_name(){
+    name = function_name + "(" + son->name + ")";
+    return RC::SUCCESS;
+  }
+};
+
+struct FuncSqlNode : public ExprSqlNode{
+  function_type func_type;
+  std::unique_ptr<ExprSqlNode> son;
+  std::string function_name;
+  FuncSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
+    need_extract = false;
+  }
+  virtual ~FuncSqlNode() = default;
+  ExprSqlNode::Type get_type() const{
+     return FUNC_EXPR; 
+  };
+  RC set_name(){
+    name = function_name + "(" + son->name + ")";
+    return RC::SUCCESS;
+  }
 };
 
 /**
@@ -67,15 +216,14 @@ enum CompOp
  */
 struct ConditionSqlNode
 {
-  int             left_is_attr;    ///< TRUE if left-hand side is an attribute
-                                   ///< 1时，操作符左边是属性名，0时，是属性值
-  Value           left_value;      ///< left-hand side value if left_is_attr = FALSE
-  RelAttrSqlNode  left_attr;       ///< left-hand side attribute
-  CompOp          comp;            ///< comparison operator
-  int             right_is_attr;   ///< TRUE if right-hand side is an attribute
-                                   ///< 1时，操作符右边是属性名，0时，是属性值
-  RelAttrSqlNode  right_attr;      ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
-  Value           right_value;     ///< right-hand side value if right_is_attr = FALSE
+
+  std::unique_ptr<ExprSqlNode>  left_expression;       ///<条件语句的左表达式          
+  CompOp                        comp;                  ///< comparison operator
+  std::unique_ptr<ExprSqlNode>  right_expression;      ///< 条件语句的右表达式
+  ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c) {}
+  ConditionSqlNode(const ConditionSqlNode& other) = delete;
+  ConditionSqlNode operator=(const ConditionSqlNode& other) = delete;
+  ~ConditionSqlNode() = default;
 };
 
 /**
@@ -91,9 +239,9 @@ struct ConditionSqlNode
 
 struct SelectSqlNode
 {
-  std::vector<RelAttrSqlNode>     attributes;    ///< attributes in select clause
+  std::vector<std::unique_ptr<ExprSqlNode>>        expressions;    ///< expressions in select clause
   std::vector<std::string>        relations;     ///< 查询的表
-  std::vector<ConditionSqlNode>   conditions;    ///< 查询条件，使用AND串联起来多个条件
+  std::vector<ConditionSqlNode*>   conditions;    ///< 查询条件，使用AND串联起来多个条件
 };
 
 /**
@@ -125,7 +273,7 @@ struct InsertSqlNode
 struct DeleteSqlNode
 {
   std::string                   relation_name;  ///< Relation to delete from
-  std::vector<ConditionSqlNode> conditions;
+  std::vector<ConditionSqlNode*> conditions;
 };
 
 /**
@@ -137,7 +285,7 @@ struct UpdateSqlNode
   std::string                   relation_name;         ///< Relation to update
   std::string                   attribute_name;        ///< 更新的字段，仅支持一个字段
   Value                         value;                 ///< 更新的值，仅支持一个字段
-  std::vector<ConditionSqlNode> conditions;
+  std::vector<ConditionSqlNode*> conditions;
 };
 
 /**
@@ -152,6 +300,7 @@ struct AttrInfoSqlNode
   AttrType    type;       ///< Type of attribute
   std::string name;       ///< Attribute name
   size_t      length;     ///< Length of attribute
+  bool        nullable = false;  ///< Whether attribute can be null value
 };
 
 /**

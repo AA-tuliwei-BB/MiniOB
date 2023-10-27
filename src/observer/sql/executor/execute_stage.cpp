@@ -68,14 +68,18 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
     case StmtType::SELECT: {
       SelectStmt *select_stmt = static_cast<SelectStmt *>(stmt);
       bool with_table_name = select_stmt->tables().size() > 1;
+      int tuple_size = select_stmt->alias().size();
+      for (int i = 0; i < tuple_size; ++i) {
+        schema.append_cell(select_stmt->alias()[i].c_str());
+      }
 
-      for (const Field &field : select_stmt->query_fields()) {
+      /*for (const Field &field : select_stmt->query_fields()) {
         if (with_table_name) {
           schema.append_cell(field.table_name(), field.field_name());
         } else {
           schema.append_cell(field.field_name());
         }
-      }
+      }*/
     } break;
 
     case StmtType::CALC: {
