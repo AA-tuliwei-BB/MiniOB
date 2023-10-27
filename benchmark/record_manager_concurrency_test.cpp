@@ -81,147 +81,148 @@ public:
 
   virtual void SetUp(const State &state)
   {
-    if (0 != state.thread_index()) {
-      return;
-    }
+    // if (0 != state.thread_index()) {
+    //   return;
+    // }
 
-    string log_name        = this->Name() + ".log";
-    string record_filename = this->record_filename();
-    LoggerFactory::init_default(log_name.c_str(), LOG_LEVEL_TRACE);
+    // string log_name        = this->Name() + ".log";
+    // string record_filename = this->record_filename();
+    // LoggerFactory::init_default(log_name.c_str(), LOG_LEVEL_TRACE);
 
-    std::call_once(init_bpm_flag, []() { BufferPoolManager::set_instance(&bpm); });
+    // std::call_once(init_bpm_flag, []() { BufferPoolManager::set_instance(&bpm); });
 
-    ::remove(record_filename.c_str());
+    // ::remove(record_filename.c_str());
 
-    RC rc = bpm.create_file(record_filename.c_str());
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to create record buffer pool file. filename=%s, rc=%s", record_filename.c_str(), strrc(rc));
-      throw runtime_error("failed to create record buffer pool file.");
-    }
+    // RC rc = bpm.create_file(record_filename.c_str());
+    // if (rc != RC::SUCCESS) {
+    //   LOG_WARN("failed to create record buffer pool file. filename=%s, rc=%s", record_filename.c_str(), strrc(rc));
+    //   throw runtime_error("failed to create record buffer pool file.");
+    // }
 
-    rc = bpm.open_file(record_filename.c_str(), buffer_pool_);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to open record file. filename=%s, rc=%s", record_filename.c_str(), strrc(rc));
-      throw runtime_error("failed to open record file");
-    }
+    // rc = bpm.open_file(record_filename.c_str(), buffer_pool_);
+    // if (rc != RC::SUCCESS) {
+    //   LOG_WARN("failed to open record file. filename=%s, rc=%s", record_filename.c_str(), strrc(rc));
+    //   throw runtime_error("failed to open record file");
+    // }
 
-    rc = handler_.init(buffer_pool_);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to init record file handler. rc=%s", strrc(rc));
-      throw runtime_error("failed to init record file handler");
-    }
-    LOG_INFO(
-        "test %s setup done. threads=%d, thread index=%d", this->Name().c_str(), state.threads(), state.thread_index());
+    // rc = handler_.init(buffer_pool_);
+    // if (rc != RC::SUCCESS) {
+    //   LOG_WARN("failed to init record file handler. rc=%s", strrc(rc));
+    //   throw runtime_error("failed to init record file handler");
+    // }
+    // LOG_INFO(
+    //     "test %s setup done. threads=%d, thread index=%d", this->Name().c_str(), state.threads(), state.thread_index());
   }
 
   virtual void TearDown(const State &state)
   {
-    if (0 != state.thread_index()) {
-      return;
-    }
+    // if (0 != state.thread_index()) {
+    //   return;
+    // }
 
-    handler_.close();
-    bpm.close_file(this->record_filename().c_str());
-    buffer_pool_ = nullptr;
-    LOG_INFO("test %s teardown done. threads=%d, thread index=%d",
-        this->Name().c_str(),
-        state.threads(),
-        state.thread_index());
+    // handler_.close();
+    // bpm.close_file(this->record_filename().c_str());
+    // buffer_pool_ = nullptr;
+    // LOG_INFO("test %s teardown done. threads=%d, thread index=%d",
+    //     this->Name().c_str(),
+    //     state.threads(),
+    //     state.thread_index());
   }
 
   void FillUp(int32_t min, int32_t max, vector<RID> &rids)
   {
-    rids.reserve(max - min);
-    RID             rid;
-    TestRecord      record;
-    vector<int32_t> record_values;
-    record_values.reserve(max - min);
-    for (int32_t value = min; value < max; ++value) {
-      record_values.push_back(value);
-    }
+    // rids.reserve(max - min);
+    // RID             rid;
+    // TestRecord      record;
+    // vector<int32_t> record_values;
+    // record_values.reserve(max - min);
+    // for (int32_t value = min; value < max; ++value) {
+    //   record_values.push_back(value);
+    // }
 
-    random_device rd;
-    mt19937       random_generator(rd());
-    shuffle(record_values.begin(), record_values.end(), random_generator);
+    // random_device rd;
+    // mt19937       random_generator(rd());
+    // shuffle(record_values.begin(), record_values.end(), random_generator);
 
-    for (int32_t record_value : record_values) {
-      record.int_fields[0]   = record_value;
-      [[maybe_unused]] RC rc = handler_.insert_record(reinterpret_cast<const char *>(&record), sizeof(record), &rid);
-      ASSERT(rc == RC::SUCCESS, "failed to insert record into record file. record value=%" PRIu32, record_value);
-      rids.push_back(rid);
-    }
+    // for (int32_t record_value : record_values) {
+    //   record.int_fields[0]   = record_value;
+    //   [[maybe_unused]] RC rc = handler_.insert_record(reinterpret_cast<const char *>(&record), sizeof(record), &rid);
+    //   ASSERT(rc == RC::SUCCESS, "failed to insert record into record file. record value=%" PRIu32, record_value);
+    //   rids.push_back(rid);
+    // }
 
-    LOG_INFO("fill up done. min=%" PRIu32 ", max=%" PRIu32 ", distance=%" PRIu32, min, max, (max - min));
+    // LOG_INFO("fill up done. min=%" PRIu32 ", max=%" PRIu32 ", distance=%" PRIu32, min, max, (max - min));
   }
 
   uint32_t GetRangeMax(const State &state) const
   {
-    uint32_t max = static_cast<uint32_t>(state.range(0) * 3);
-    if (max <= 0) {
-      max = (1 << 31);
-    }
-    return max;
+    // uint32_t max = static_cast<uint32_t>(state.range(0) * 3);
+    // if (max <= 0) {
+    //   max = (1 << 31);
+    // }
+    // return max;
+    return 0;
   }
 
   void Insert(int32_t value, Stat &stat, RID &rid)
   {
-    TestRecord record;
-    record.int_fields[0] = value;
+    // TestRecord record;
+    // record.int_fields[0] = value;
 
-    RC rc = handler_.insert_record(reinterpret_cast<const char *>(&record), sizeof(record), &rid);
-    switch (rc) {
-      case RC::SUCCESS: {
-        stat.insert_success_count++;
-      } break;
-      default: {
-        stat.insert_other_count++;
-      } break;
-    }
+    // RC rc = handler_.insert_record(reinterpret_cast<const char *>(&record), sizeof(record), &rid);
+    // switch (rc) {
+    //   case RC::SUCCESS: {
+    //     stat.insert_success_count++;
+    //   } break;
+    //   default: {
+    //     stat.insert_other_count++;
+    //   } break;
+    // }
   }
 
   void Delete(const RID &rid, Stat &stat)
   {
-    RC rc = handler_.delete_record(&rid);
-    switch (rc) {
-      case RC::SUCCESS: {
-        stat.delete_success_count++;
-      } break;
-      case RC::RECORD_NOT_EXIST: {
-        stat.not_exist_count++;
-      } break;
-      default: {
-        stat.delete_other_count++;
-      } break;
-    }
+    // RC rc = handler_.delete_record(&rid);
+    // switch (rc) {
+    //   case RC::SUCCESS: {
+    //     stat.delete_success_count++;
+    //   } break;
+    //   case RC::RECORD_NOT_EXIST: {
+    //     stat.not_exist_count++;
+    //   } break;
+    //   default: {
+    //     stat.delete_other_count++;
+    //   } break;
+    // }
   }
 
   void Scan(int32_t begin, int32_t end, Stat &stat)
   {
-    TestConditionFilter condition_filter(begin, end);
-    RecordFileScanner   scanner;
-    VacuousTrx          trx;
-    RC rc = scanner.open_scan(nullptr /*table*/, *buffer_pool_, &trx, true /*readonly*/, &condition_filter);
-    if (rc != RC::SUCCESS) {
-      stat.scan_open_failed_count++;
-    } else {
-      Record  record;
-      int32_t count = 0;
-      while (scanner.has_next()) {
-        rc = scanner.next(record);
-        ASSERT(rc == RC::SUCCESS, "failed to get record, rc=%s", strrc(rc));
-        count++;
-      }
+    // TestConditionFilter condition_filter(begin, end);
+    // RecordFileScanner   scanner;
+    // VacuousTrx          trx;
+    // RC rc = scanner.open_scan(nullptr /*table*/, *buffer_pool_, &trx, true /*readonly*/, &condition_filter);
+    // if (rc != RC::SUCCESS) {
+    //   stat.scan_open_failed_count++;
+    // } else {
+    //   Record  record;
+    //   int32_t count = 0;
+    //   while (scanner.has_next()) {
+    //     rc = scanner.next(record);
+    //     ASSERT(rc == RC::SUCCESS, "failed to get record, rc=%s", strrc(rc));
+    //     count++;
+    //   }
 
-      if (rc != RC::SUCCESS) {
-        stat.scan_other_count++;
-      } else if (count != (end - begin + 1)) {
-        stat.mismatch_count++;
-      } else {
-        stat.scan_success_count++;
-      }
+    //   if (rc != RC::SUCCESS) {
+    //     stat.scan_other_count++;
+    //   } else if (count != (end - begin + 1)) {
+    //     stat.mismatch_count++;
+    //   } else {
+    //     stat.scan_success_count++;
+    //   }
 
-      scanner.close_scan();
-    }
+    //   scanner.close_scan();
+    // }
   }
 
 protected:

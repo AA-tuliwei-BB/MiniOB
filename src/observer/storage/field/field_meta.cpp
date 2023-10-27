@@ -85,7 +85,7 @@ bool FieldMeta::nullable() const
   return nullable_;
 }
 
-int FieldMeta::id() const { id_; }
+int FieldMeta::id() const { return id_; }
 
 void FieldMeta::desc(std::ostream &os) const
 {
