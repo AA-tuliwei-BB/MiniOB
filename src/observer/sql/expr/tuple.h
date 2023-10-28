@@ -174,8 +174,10 @@ public:
     FieldExpr *field_expr = speces_[index];
     const FieldMeta *field_meta = field_expr->field().meta();
     cell.set_type(field_meta->type());
-    const char * record_data = this->record_->data() + this->record_->offset()[field_meta->id()];
-    cell.set_data(record_data, this->record_->len());
+    int id = field_meta->id();
+    const char * record_data = this->record_->data() + this->record_->offset()[id];
+    int len = record_->offset()[id + 1] - record_->offset()[id];
+    cell.set_data(record_data, len);
     return RC::SUCCESS;
   }
 

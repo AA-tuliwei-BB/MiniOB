@@ -285,7 +285,9 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
     int fields_size = static_cast<int>(fields.size());
     for (int i = 0; i < fields_size; ++i) {
       const FieldMeta *field_meta = table_meta.field(fields[i].c_str());
-      auto updater = [&values, &i, &field_meta](char *data) { memcpy(data, values[i].data(), field_meta->len()); };
+      auto updater = [&values, &i, &field_meta](char *data) {
+        memcpy(data, values[i].data(), field_meta->len());
+      };
       record_handler_->update_record_field(rid, field_meta, updater);
     }
     get_record(rid, after);
@@ -425,12 +427,13 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
   // 计算总长度，分配内存
   record.offset().resize(value_num + 1);
   int record_size = 0;
-  int table_size = value_num;
-  for (int i = 0; i < table_size; ++i) {
+  for (int i = 0; i < value_num; i++) {
     record.offset()[i] = record_size;
-    record_size += values[i].length();
+    const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
+    record_size += field->len() != 0 ? field->len() : values[i].length();
   }
   record.offset()[value_num] = record_size;
+
   char *record_data = (char *)malloc(record_size);
 
   // 复制所有字段的值
