@@ -241,6 +241,8 @@ public:
    */
   RC get_data(const RID *rid, OverFlowData *data);
 
+  void make_dirty();
+
   /**
    * @brief 返回该记录页的页号
    */

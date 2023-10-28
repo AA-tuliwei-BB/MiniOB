@@ -55,8 +55,7 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
   }
 
   RC rc = RC::SUCCESS;
-  
-  int field_offset = 0;
+ 
   int trx_field_num = 0;
   const vector<FieldMeta> *trx_fields = TrxKit::instance()->trx_fields();
   if (trx_fields != nullptr) {
@@ -64,8 +63,13 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
 
     for (size_t i = 0; i < trx_fields->size(); i++) {
       const FieldMeta &field_meta = (*trx_fields)[i];
-      fields_[i] = FieldMeta(field_meta.name(), field_meta.type(), field_offset, field_meta.len(), false/*visible*/, false);
-      field_offset += field_meta.len();
+      fields_[i] = FieldMeta(field_meta.name(), field_meta.type(), field_meta.len(), 0x3f3f3f3f, false/*visible*/, false);
+      if (field_meta.len() == 0) {
+        variable_length_count_++;
+      }
+      if (field_meta.nullable()) {
+        nullable_count_++;
+      }
     }
 
     trx_field_num = static_cast<int>(trx_fields->size());
@@ -75,14 +79,18 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
 
   for (int i = 0; i < field_num; i++) {
     const AttrInfoSqlNode &attr_info = attributes[i];
-    rc = fields_[i + trx_field_num].init(attr_info.name.c_str(), 
-            attr_info.type, field_offset, attr_info.length, true/*visible*/, attr_info.nullable/*MYTODO 读取attr_info*/);
+    rc = fields_[i + trx_field_num].init(attr_info.name.c_str(), attr_info.type,
+            attr_info.length, i, true/*visible*/, attr_info.nullable);
     if (rc != RC::SUCCESS) {
       LOG_ERROR("Failed to init field meta. table name=%s, field name: %s", name, attr_info.name.c_str());
       return rc;
     }
-
-    field_offset += attr_info.length;
+    if (attr_info.length == 0) {
+      variable_length_count_++;
+    }
+    if (attr_info.nullable) {
+      nullable_count_++;
+    }
   }
 
   table_id_ = table_id;

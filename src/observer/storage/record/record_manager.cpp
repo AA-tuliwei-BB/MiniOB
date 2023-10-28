@@ -102,7 +102,7 @@ RC ExtraRecord::to_record(DiskBufferPool *disk_buffer_pool_, const TableMeta *ta
   // 获取record的数据
   if (!overflow_flag) {
     // 未溢出
-    rec->~Record();
+    rec->clear_data();
     // 此时extra.data指向frame中的某个位置，原始位置不是const的，因此可以进行转化
     rec->set_data(const_cast<char *>(data));
   } else {
@@ -138,6 +138,7 @@ RC ExtraRecord::to_record(DiskBufferPool *disk_buffer_pool_, const TableMeta *ta
   }
 
   // 获取到了record的数据，处理record的其他参数
+  rec->rid() = rid;
   rec->null().clear();
   rec->offset().clear();
   int null_p = 0, offset_p = 0, current_offset = 0;
@@ -278,7 +279,7 @@ RC RecordPageHandler::insert_record(const ExtraRecord &record, RID *rid)
 {
   ASSERT(readonly_ == false, "cannot insert record into page while the page is readonly");
 
-  int available_size = BP_PAGE_SIZE - page_header_->tail - page_header_->number * 4;
+  int available_size = BP_PAGE_DATA_SIZE - page_header_->tail - page_header_->number * 4;
   if (available_size < record.len + 4) {
     LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
     return RC::RECORD_NOMEM;
@@ -287,6 +288,7 @@ RC RecordPageHandler::insert_record(const ExtraRecord &record, RID *rid)
   page_header_->number++;
   int32_t offset = page_header_->tail;
   page_header_->tail += record.len;
+  *get_list(page_header_->number) = offset;
 
   char *record_data = get_record_data(offset);
   //写入length
@@ -330,7 +332,7 @@ RC RecordPageHandler::insert_data(const OverFlowData &data, RID *rid, RID* next/
 {
   ASSERT(readonly_ == false, "cannot insert record into page while the page is readonly");
 
-  int available_size = BP_PAGE_SIZE - page_header_->tail - page_header_->number * 4;
+  int available_size = BP_PAGE_DATA_SIZE - page_header_->tail - page_header_->number * 4;
   if (available_size < data.len + sizeof(RID) + 4) {
     LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
     return RC::RECORD_NOMEM;
@@ -365,7 +367,7 @@ RC RecordPageHandler::recover_insert_record(const ExtraRecord &record, const RID
 {
   ASSERT(readonly_ == false, "cannot insert record into page while the page is readonly");
 
-  int available_size = BP_PAGE_SIZE - page_header_->tail - page_header_->number * 4;
+  int available_size = BP_PAGE_DATA_SIZE - page_header_->tail - page_header_->number * 4;
   if (available_size < record.len + 4) {
     LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
     return RC::RECORD_NOMEM;
@@ -484,6 +486,8 @@ RC RecordPageHandler::get_data(const RID *rid, OverFlowData *data)
   return RC::SUCCESS;
 }
 
+void RecordPageHandler::make_dirty() { frame_->mark_dirty(); }
+
 PageNum RecordPageHandler::get_page_num() const
 {
   if (nullptr == page_header_) {
@@ -494,10 +498,10 @@ PageNum RecordPageHandler::get_page_num() const
 
 int32_t RecordPageHandler::free_space() const
 {
-  return BP_PAGE_SIZE - page_header_->tail - page_header_->number * sizeof(int);
+  return BP_PAGE_DATA_SIZE - page_header_->tail - page_header_->number * sizeof(int);
 }
 
-int32_t *RecordPageHandler::get_list() { return reinterpret_cast<int32_t *>(frame_->data() + BP_PAGE_SIZE); }
+int32_t *RecordPageHandler::get_list() { return reinterpret_cast<int32_t *>(frame_->data() + BP_PAGE_DATA_SIZE); }
 
 int32_t* RecordPageHandler::get_list(int32_t pos)
 {
@@ -519,7 +523,7 @@ int32_t RecordPageHandler::get_list_next(int32_t current)
 
 bool RecordPageHandler::is_full()
 {
-  return table_meta_->min_size() + 4 > BP_PAGE_SIZE - page_header_->tail;
+  return table_meta_->min_size() + 4 > BP_PAGE_DATA_SIZE - page_header_->tail;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -611,6 +615,7 @@ RC RecordFileHandler::update_record_field(const RID &rid, const FieldMeta *field
 
   // 执行updater
   updater(field_data);
+  page_handler.make_dirty();
   return RC();
 }
 

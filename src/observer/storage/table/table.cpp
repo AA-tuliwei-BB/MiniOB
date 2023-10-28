@@ -404,6 +404,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     return RC::SCHEMA_FIELD_MISSING;
   }
 
+  record.null().resize(value_num);
   const int normal_field_start_index = table_meta_.sys_field_num();
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
@@ -413,22 +414,31 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
                 table_meta_.name(), field->name(), field->type(), value.attr_type());
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
+    if (!field->nullable() && value.is_null()) {
+      LOG_ERROR("Invalid null value. table name =%s, field name=%s",
+                table_meta_.name(), field->name());
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+    record.null()[i] = value.is_null();
   }
 
   // 计算总长度，分配内存
+  record.offset().resize(value_num + 1);
   int record_size = 0;
   int table_size = value_num;
   for (int i = 0; i < table_size; ++i) {
+    record.offset()[i] = record_size;
     record_size += values[i].length();
   }
+  record.offset()[value_num] = record_size;
   char *record_data = (char *)malloc(record_size);
 
   // 复制所有字段的值
-  for (int i = 0, offset = 0; i < value_num; i++) {
+  for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
     size_t copy_len = field->len() != 0 ? field->len() : value.length();
-    memcpy(record_data + offset, value.data(), copy_len);
+    memcpy(record_data + record.offset()[i], value.data(), copy_len);
   }
 
   record.set_data_owner(record_data, record_size);
