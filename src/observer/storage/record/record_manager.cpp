@@ -93,6 +93,7 @@ RC ExtraRecord::from_record(const Record &record, const TableMeta &table_meta)
     overflow_flag = true;
   } else {
     len = data_start_offset() + data_len;
+    overflow_flag = false;
   }
   return RC::SUCCESS;
 }
@@ -413,7 +414,7 @@ RC RecordPageHandler::recover_insert_record(const ExtraRecord &record, const RID
 RC RecordPageHandler::delete_record(const RID *rid)
 {
   ASSERT(readonly_ == false, "cannot delete record from page while the page is readonly");
-  for (int i = 0; i < page_header_->number; ++i) {
+  for (int i = 1; i <= page_header_->number; ++i) {
     int32_t *offset = get_list(i);
     if (*offset == rid->offset) {
       *offset = 0;
