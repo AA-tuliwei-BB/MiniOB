@@ -11,7 +11,16 @@ class ExpressionPhysicalOperator : public PhysicalOperator
 public:
   ExpressionPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
       : expressions_(std::move(expressions)), tuple_(expressions_)
-  {}
+  {
+    is_constant_ = true;
+    Value test;
+    for(auto &it : expressions_){
+      if(it->try_get_value(test) == RC::SUCCESS){
+        is_constant_ = false;
+        break;
+      }
+    }
+  }
 
   virtual ~ExpressionPhysicalOperator() = default;
 
@@ -43,4 +52,5 @@ private:
   // ProjectTuple tuple_;
   std::vector<std::unique_ptr<Expression>> expressions_;
   ExpressionTuple tuple_;
+  bool is_constant_;
 };

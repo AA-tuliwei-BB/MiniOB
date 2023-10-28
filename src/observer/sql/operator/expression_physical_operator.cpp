@@ -36,6 +36,10 @@ RC ExpressionPhysicalOperator::open(Trx *trx)
 RC ExpressionPhysicalOperator::next()
 {
   if (children_.empty()) {
+    if(is_constant_) {
+      is_constant_ = false;
+      return RC::SUCCESS;
+    }
     return RC::RECORD_EOF;
   }
   RC rc = children_[0]->next();
