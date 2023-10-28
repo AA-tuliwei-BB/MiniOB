@@ -258,16 +258,19 @@ RC Table::insert_record(Record &record)
 RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::vector<Value>&values)
 {
   // 删除原索引，修改，创建新索引
-  Record before;
-  get_record(rid, before);
-  for (auto index : this->indexes_) {
-    for (std::string field_name : fields) {
-      if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->delete_entry(before.data(), &rid);
-        break;
+  if (int(this->indexes_.size()) != 0) {
+    Record before;
+    get_record(rid, before);
+    for (auto index : this->indexes_) {
+      for (std::string field_name : fields) {
+        if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
+          index->delete_entry(before.data(), &rid);
+          break;
+        }
       }
     }
   }
+
   const TableMeta &table_meta = this->table_meta();
   auto visitor = [&fields, &values, &table_meta](Record &visited_record) {
     int fields_size = static_cast<int>(fields.size());
@@ -276,14 +279,17 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       memcpy(visited_record.data() + field_meta->offset(), values[i].data(), field_meta->len());
     }
   };
-  Record after;
-  get_record(rid, after);
   record_handler_->visit_record(rid, false, visitor);
-  for (auto index : this->indexes_) {
-    for (std::string field_name : fields) {
-      if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->insert_entry(after.data(), &rid);
-        break;
+
+  if (int(this->indexes_.size()) != 0) {
+    Record after;
+    get_record(rid, after);
+    for (auto index : this->indexes_) {
+      for (std::string field_name : fields) {
+        if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
+          index->insert_entry(after.data(), &rid);
+          break;
+        }
       }
     }
   }
