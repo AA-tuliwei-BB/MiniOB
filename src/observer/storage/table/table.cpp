@@ -345,6 +345,7 @@ RC Table::get_record(const RID &rid, Record &record)
   int record_size = 0;
 
   auto copier = [&record, &record_data, &record_size](Record &record_src) {
+    record = record_src;
     record_size = record_src.size();
     record_data = (char *)malloc(record_size);
     ASSERT(nullptr != record_data, "failed to malloc memory. record data size=%d", record_size);
