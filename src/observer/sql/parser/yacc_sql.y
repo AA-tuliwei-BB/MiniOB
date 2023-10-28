@@ -589,29 +589,29 @@ expression:
 
 complex_expr:
     MAX_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@1));     
+      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@$));     
     }
     | MIN_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@$));
     }
     | COUNT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@$));
     }
     | AVG_FUNC LBRACE complex_expr RBRACE{
-      $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@$));
     }
     | SUM_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@$));
     }
 
     | LENGTH_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, token_name(sql_string, &@1)); 
+      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, nullptr, token_name(sql_string, &@$)); 
     }
-    | ROUND_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, token_name(sql_string, &@1));
+    | ROUND_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, $5, token_name(sql_string, &@$));
     }
-    | DATE_FORMAT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));
+    | DATE_FORMAT_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, $5, token_name(sql_string, &@$));
     }
     | ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;

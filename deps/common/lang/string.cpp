@@ -288,7 +288,7 @@ std::string double_to_str(double v)
 std::string date_to_str(int date)
 {
     char buf[13];
-    const int year_weight = 400 * 40, month_weight = 40;
+    const int year_weight = 100 * 100, month_weight = 100;
     int year = date / year_weight, month = date % year_weight / month_weight, day = date % month_weight;
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d", year, month, day);
 

@@ -82,7 +82,7 @@ QUOTE            [\'\"]
 {DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 {QUOTE}(1|2)?[0-9]{3}\-(0|1)?[0-9]\-[0-3]?[0-9]{QUOTE}  {
   int year, month, day;
-  const int year_weight = 400 * 40, month_weight = 40;
+  const int year_weight = 100 * 100, month_weight = 100;
   sscanf(yytext, "%*c%d%*c%d%*c%d%*c", &year, &month, &day);
   if(check_date(year, month, day)){
     yylval -> number = year * year_weight + month * month_weight + day;

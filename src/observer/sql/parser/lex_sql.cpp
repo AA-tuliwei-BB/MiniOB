@@ -1374,7 +1374,7 @@ YY_RULE_SETUP
 #line 83 "lex_sql.l"
 {
   int year, month, day;
-  const int year_weight = 400 * 40, month_weight = 40;
+  const int year_weight = 100 * 100, month_weight = 100;
   sscanf(yytext, "%*c%d%*c%d%*c%d%*c", &year, &month, &day);
   if(check_date(year, month, day)){
     yylval -> number = year * year_weight + month * month_weight + day;

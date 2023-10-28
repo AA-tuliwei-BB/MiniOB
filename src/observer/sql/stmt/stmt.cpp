@@ -230,7 +230,7 @@ Field* star_replacement){
     }
     std::unique_ptr<AggrFuncExpr> result(new AggrFuncExpr(
     static_cast<AggrFuncExpr::Type>(static_cast<int>(cur.func_type) - 1), std::move(son_parse.first)));
-    cur.set_name();
+    // cur.set_name();
     // result->set_name(cur.name[0]);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
@@ -269,9 +269,26 @@ Field* star_replacement){
       break;
     }
     std::unique_ptr<FuncExpr> result(new FuncExpr(result_type, std::move(son_parse.first)));
-    cur.set_name();
-    // result->set_name(cur.name[0]);
-    return std::make_pair(std::move(result), RC::SUCCESS);
+    if(result_type == FuncExpr::Type::LENGTH){
+      // cur.set_name();
+      // result->set_name(cur.name[0]);
+      return std::make_pair(std::move(result), RC::SUCCESS);
+    }else {
+      auto attr_parse = build_expression(cur.attr.get(), tables, table_map, query_fields, db_name, star_replacement);
+      // cur.set_name();
+      // result->set_name(cur.name[0]);
+      if(attr_parse.second != RC::SUCCESS){
+        LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), attr_parse.second);
+      return std::make_pair(std::unique_ptr<Expression>(nullptr), attr_parse.second);
+      }
+      Value attr;
+      
+      if(attr_parse.first->try_get_value(attr) == RC::SUCCESS)
+      if(result_type == FuncExpr::Type::ROUND){
+        result->set_round_bits(attr.get_int());
+      } else result->set_format_string(attr.get_string());
+      return std::make_pair(std::move(result), RC::SUCCESS);
+    }
   }
   break;
   case ExprSqlNode::Type::ARITHMATIC_EXPR:{
