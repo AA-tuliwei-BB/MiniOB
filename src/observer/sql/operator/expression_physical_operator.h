@@ -15,7 +15,7 @@ public:
     is_constant_ = true;
     Value test;
     for(auto &it : expressions_){
-      if(it->try_get_value(test) == RC::SUCCESS){
+      if(it->try_get_value(test) != RC::SUCCESS){
         is_constant_ = false;
         break;
       }
