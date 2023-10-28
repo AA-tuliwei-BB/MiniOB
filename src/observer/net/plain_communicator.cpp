@@ -221,8 +221,15 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   rc = RC::SUCCESS;
   Tuple *tuple = nullptr;
-  while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
+  bool visited = false;
+  while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple)) || !visited) {
     assert(tuple != nullptr);
+    visited = true;
+    
+    if (rc != RC::SUCCESS && rc != RC::RECORD_EOF) {
+        sql_result->close();
+        return rc;
+    }
 
     int cell_num = tuple->cell_num();
     for (int i = 0; i < cell_num; i++) {

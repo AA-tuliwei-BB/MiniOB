@@ -66,6 +66,8 @@ RC SqlResult::next_tuple(Tuple *&tuple)
 {
   RC rc = operator_->next();
   if (rc != RC::SUCCESS) {
+    if(rc == RC::RECORD_EOF)
+      tuple = operator_->current_tuple();
     return rc;
   }
 

@@ -249,10 +249,10 @@ Field* star_replacement){
       LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), son_parse.second);
       return std::make_pair(std::unique_ptr<Expression>(nullptr), son_parse.second);
     }
-    if(!son_parse.first->is_attr()){
-      LOG_WARN("invalid argument type for non-aggregate function(id=%d). son expression type id=%d.", static_cast<int>(cur.func_type), static_cast<int>(son_parse.first->type()));
-      return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
-    }
+    // if(!son_parse.first->is_attr()){
+    //   LOG_WARN("invalid argument type for non-aggregate function(id=%d). son expression type id=%d.", static_cast<int>(cur.func_type), static_cast<int>(son_parse.first->type()));
+    //   return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
+    // }
     FuncExpr::Type result_type;
     switch (cur.func_type)
     {

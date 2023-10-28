@@ -79,6 +79,8 @@ struct ValueSqlNode : public ExprSqlNode
      return VALUE_EXPR;
   };
   RC set_name(std::string n){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = n;
     return RC::SUCCESS;
   }
@@ -88,19 +90,16 @@ struct RelAttrSqlNode : public ExprSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
-  std::string alias_name;
 
   ExprSqlNode::Type get_type() const{
      return REL_ATTR_EXPR; 
   };
   RC set_name(bool table_disable){
-    if(name.empty()){
-      if(!alias_name.empty())
-      name = alias_name;
-    else if(relation_name.empty() || table_disable)
+    if(!name.empty())
+      return RC::SUCCESS;
+    if(relation_name.empty() || table_disable)
       name = attribute_name;
     else name = relation_name + '.' + attribute_name;
-    }
     return RC::SUCCESS;
   }
 };
@@ -128,6 +127,8 @@ struct ArithSqlNode : public ExprSqlNode
      return ARITHMATIC_EXPR; 
   };
   RC set_name(std::string n){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = n;
     return RC::SUCCESS;
   }
@@ -166,6 +167,8 @@ struct AggrSqlNode : public ExprSqlNode{
      return AGGR_FUNC_EXPR; 
   };
   RC set_name(){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = function_name + "(" + son->name + ")";
     return RC::SUCCESS;
   }
@@ -183,6 +186,8 @@ struct FuncSqlNode : public ExprSqlNode{
      return FUNC_EXPR; 
   };
   RC set_name(){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = function_name + "(" + son->name + ")";
     return RC::SUCCESS;
   }

@@ -161,6 +161,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <attr_info>           attr_def
 %type <string>              alias_attr
 %type <value_list>          value_list
+%type <relation_list>       from
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <complex_expr_list>   select_attr
@@ -494,25 +495,41 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where
+    SELECT select_attr from where
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
         $$->selection.expressions.swap(*$2);
         delete $2;
       }
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
+      
+      if ($3 != nullptr) {
+        $$->selection.relations.swap(*$3);
+        delete $3;
       }
-      $$->selection.relations.push_back($4);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
+      
+      if ($4 != nullptr) {
+        $$->selection.conditions.swap(*$4);
+        delete $4;
+      }
+    }
+    ;
 
-      if ($6 != nullptr) {
-        $$->selection.conditions.swap(*$6);
-        delete $6;
+from:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    |FROM ID rel_list
+    {
+      $$ = new std::vector<std::string>;
+      if ($3 != nullptr) {
+        $$->swap(*$3);
+        delete $3;
       }
-      free($4);
+      $$->push_back($2);
+      std::reverse($$->begin(), $$->end());
+      free($2);
     }
     ;
 calc_stmt:
@@ -596,26 +613,18 @@ complex_expr:
     | DATE_FORMAT_FUNC LBRACE complex_expr RBRACE {
       $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));
     }
-    | ID alias_attr {
+    | ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
       tmp->relation_name = "";
       tmp->attribute_name = $1;
-      if($2 != nullptr){
-        tmp->alias_name = $2;
-        free($2);
-      } else tmp->alias_name = "";
       tmp->need_extract = false;
       free($1);
       $$ = tmp;
     }
-    | ID DOT ID alias_attr{
+    | ID DOT ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
       tmp->relation_name  = $1;
       tmp->attribute_name = $3;
-      if($4 != nullptr){
-        tmp->alias_name = $4;
-        free($4);
-      } else tmp->alias_name = "";
       tmp->need_extract = false;
       free($1);
       free($3);
@@ -625,7 +634,6 @@ complex_expr:
       RelAttrSqlNode* attr = new RelAttrSqlNode;
       attr->relation_name  = "";
       attr->attribute_name = "*";
-      attr->alias_name = "";
       attr->need_extract = true;
       $$ = attr;
     }
@@ -671,24 +679,27 @@ complex_expr_list:
     {
       $$ = nullptr;
     }
-    | COMMA complex_expr complex_expr_list {
-      if ($3 != nullptr) {
-        $$ = $3;
+    | COMMA complex_expr alias_attr complex_expr_list {
+      if ($4 != nullptr) {
+        $$ = $4;
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
-
+      if($3 != nullptr)
+        $2->set_name(std::string($3));
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($2));
     }
     ;
 
 select_attr:
-    complex_expr complex_expr_list {
-      if ($2 != nullptr) {
-        $$ = $2;
+    complex_expr alias_attr complex_expr_list {
+      if ($3 != nullptr) {
+        $$ = $3;
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
+      if($2 != nullptr)
+        $1->set_name(std::string($2));
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($1));
     }
     ;
@@ -700,6 +711,9 @@ alias_attr:
     }
     | AS ID {
       $$ = $2;
+    }
+    | ID {
+      $$ = $1;
     }
 
 rel_list:
