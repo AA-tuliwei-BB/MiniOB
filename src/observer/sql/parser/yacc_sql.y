@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
+#include <utility>
 
 #include "common/log/log.h"
 #include "common/lang/string.h"
@@ -188,6 +189,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <sql_node>            load_data_stmt
 %type <sql_node>            explain_stmt
 %type <sql_node>            set_variable_stmt
+%type <sql_node>            set_variable_list
 %type <sql_node>            help_stmt
 %type <sql_node>            exit_stmt
 %type <sql_node>            command_wrapper
@@ -480,18 +482,17 @@ delete_stmt:    /*  delete 语句的语法解析树*/
     }
     ;
 update_stmt:      /*  update 语句的语法解析树*/
-    UPDATE ID SET ID EQ value where 
+    UPDATE ID set_variable_stmt where 
     {
       $$ = new ParsedSqlNode(SCF_UPDATE);
       $$->update.relation_name = $2;
-      $$->update.attribute_name = $4;
-      $$->update.value = *$6;
-      if ($7 != nullptr) {
-        $$->update.conditions.swap(*$7);
-        delete $7;
+      $$->update.name.swap($3->set_variable.name);
+      $$->update.value.swap($3->set_variable.value);
+      if ($4 != nullptr) {
+        $$->update.conditions.swap(*$4);
+        delete $4;
       }
-      free($2);
-      free($4);
+      delete $3;
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
@@ -795,11 +796,32 @@ explain_stmt:
     ;
 
 set_variable_stmt:
-    SET ID EQ value
+    SET ID EQ value set_variable_list
     {
-      $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
-      $$->set_variable.name  = $2;
-      $$->set_variable.value = *$4;
+      if($5 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $5;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(*$4);
+      free($2);
+      delete $4;
+    }
+    ;
+
+set_variable_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    |COMMA ID EQ value set_variable_list
+    {
+      if($5 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $5;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(*$4);
       free($2);
       delete $4;
     }

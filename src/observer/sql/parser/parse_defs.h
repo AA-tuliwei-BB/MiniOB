@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 
 #include "sql/parser/value.h"
 #include "common/rc.h"
@@ -292,8 +293,8 @@ struct DeleteSqlNode
 struct UpdateSqlNode
 {
   std::string                   relation_name;         ///< Relation to update
-  std::string                   attribute_name;        ///< 更新的字段，仅支持一个字段
-  Value                         value;                 ///< 更新的值，仅支持一个字段
+  std::vector<std::string>      name;                  ///< 更新的字段的名称
+  std::vector<Value>            value;                 ///< 更新的字段的值
   std::vector<ConditionSqlNode*> conditions;
 };
 
@@ -383,8 +384,9 @@ struct LoadDataSqlNode
  */
 struct SetVariableSqlNode
 {
-  std::string name;
-  Value       value;
+  // vector<std::pair<std::string, Value>> val_list;
+  std::vector<std::string> name;
+  std::vector<Value>       value;
 };
 
 class ParsedSqlNode;
