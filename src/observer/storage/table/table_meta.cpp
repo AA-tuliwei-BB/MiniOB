@@ -41,7 +41,6 @@ void TableMeta::swap(TableMeta &other) noexcept
   indexes_.swap(other.indexes_);
 }
 
-// MYTODO
 RC TableMeta::init(int32_t table_id, const char *name, int field_num, const AttrInfoSqlNode attributes[])
 {
   if (common::is_blank(name)) {
@@ -270,6 +269,16 @@ int TableMeta::deserialize(std::istream &is)
   table_id_ = table_id;
   name_.swap(table_name);
   fields_.swap(fields);
+
+  int fields_size = fields_.size();
+  for (int i = sys_field_num(); i < fields_size; i++) {
+    if (fields_[i].len() == 0) {
+      variable_length_count_++;
+    }
+    if (fields_[i].nullable()) {
+      nullable_count_++;
+    }
+  }
 
   const Json::Value &indexes_value = table_value[FIELD_INDEXES];
   if (!indexes_value.empty()) {
