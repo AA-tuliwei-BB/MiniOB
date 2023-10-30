@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/update_stmt.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
+#include "common/lang/comparator.h"
 
 UpdateStmt::UpdateStmt(Table *table, const std::string *fields, const Value *values, int value_amount, FilterStmt *filter_stmt)
     : table_(table), fields_(fields), values_(values), value_amount_(value_amount), filter_stmt_(filter_stmt)
@@ -36,15 +37,20 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
   }
 
   // TODO when update 多词条修改
-  const Value *values = &update.value;
-  const std::string *fields = &update.attribute_name;
-  const int value_num = 1;
+  const Value *values = update.value.data();
+  const std::string *fields = update.name.data();
+  if(update.name.size() != update.value.size()){
+    LOG_WARN("value size doesn't equal to field size.");
+    return RC::INTERNAL;
+  }
+
+  const int value_num = update.name.size();
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num() - table_meta.sys_field_num();
 
   // check field
   const int sys_field_num = table_meta.sys_field_num();
-  for (int i = 0; i < 1; ++i) {// 用于拓展多词条
+  for (int i = 0; i < value_num; ++i) {// 用于拓展多词条
     bool bFieldExists = false;
     for (int j = 0; j < field_num; j++) {
       const FieldMeta *field_meta = table_meta.field(j + sys_field_num);
@@ -52,11 +58,24 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
         bFieldExists = true;
         const AttrType field_type = field_meta->type();
         const AttrType value_type = values[i].attr_type();
-        if (field_type != value_type) {  // TODO try to convert the value type to field type
+        if (!common::field_type_compare_compatible_table[field_type][value_type]) {  // TODO try to convert the value type to field type
           LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
             table_name, field_meta->name(), field_type, value_type);
           return RC::SCHEMA_FIELD_TYPE_MISMATCH;
         }
+        //  else if(field_type != value_type){
+        //   Value tmp;
+        //   switch (field_type)
+        //   {
+        //   case INTS:
+        //      = values[i].get_int();
+            
+        //     break;
+        //   case FLOATS
+        //   default:
+        //     break;
+        //   }
+        // }
       }
     }
     if (!bFieldExists) {
@@ -76,6 +95,6 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
     return rc;
   }
 
-  stmt = new UpdateStmt(table, fields, values, 1, filter_stmt);
+  stmt = new UpdateStmt(table, fields, values, value_num, filter_stmt);
   return RC::SUCCESS;
 }

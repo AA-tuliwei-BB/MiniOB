@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
+#include <utility>
 
 #include "common/log/log.h"
 #include "common/lang/string.h"
@@ -161,6 +162,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <attr_info>           attr_def
 %type <string>              alias_attr
 %type <value_list>          value_list
+%type <relation_list>       from
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <complex_expr_list>   select_attr
@@ -187,6 +189,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <sql_node>            load_data_stmt
 %type <sql_node>            explain_stmt
 %type <sql_node>            set_variable_stmt
+%type <sql_node>            set_variable_list
 %type <sql_node>            help_stmt
 %type <sql_node>            exit_stmt
 %type <sql_node>            command_wrapper
@@ -479,40 +482,55 @@ delete_stmt:    /*  delete 语句的语法解析树*/
     }
     ;
 update_stmt:      /*  update 语句的语法解析树*/
-    UPDATE ID SET ID EQ value where 
+    UPDATE ID set_variable_stmt where 
     {
       $$ = new ParsedSqlNode(SCF_UPDATE);
       $$->update.relation_name = $2;
-      $$->update.attribute_name = $4;
-      $$->update.value = *$6;
-      if ($7 != nullptr) {
-        $$->update.conditions.swap(*$7);
-        delete $7;
+      $$->update.name.swap($3->set_variable.name);
+      $$->update.value.swap($3->set_variable.value);
+      if ($4 != nullptr) {
+        $$->update.conditions.swap(*$4);
+        delete $4;
       }
-      free($2);
-      free($4);
+      delete $3;
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where
+    SELECT select_attr from where
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
         $$->selection.expressions.swap(*$2);
         delete $2;
       }
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
+      
+      if ($3 != nullptr) {
+        $$->selection.relations.swap(*$3);
+        delete $3;
       }
-      $$->selection.relations.push_back($4);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
+      
+      if ($4 != nullptr) {
+        $$->selection.conditions.swap(*$4);
+        delete $4;
+      }
+    }
+    ;
 
-      if ($6 != nullptr) {
-        $$->selection.conditions.swap(*$6);
-        delete $6;
+from:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    |FROM ID rel_list
+    {
+      $$ = new std::vector<std::string>;
+      if ($3 != nullptr) {
+        $$->swap(*$3);
+        delete $3;
       }
-      free($4);
+      $$->push_back($2);
+      std::reverse($$->begin(), $$->end());
+      free($2);
     }
     ;
 calc_stmt:
@@ -572,50 +590,42 @@ expression:
 
 complex_expr:
     MAX_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@1));     
+      $$ = new AggrSqlNode(function_type::AGGR_MAX, $3, token_name(sql_string, &@$));     
     }
     | MIN_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_MIN, $3, token_name(sql_string, &@$));
     }
     | COUNT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_COUNT, $3, token_name(sql_string, &@$));
     }
     | AVG_FUNC LBRACE complex_expr RBRACE{
-      $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_AVG, $3, token_name(sql_string, &@$));
     }
     | SUM_FUNC LBRACE complex_expr RBRACE {
-      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@1));
+      $$ = new AggrSqlNode(function_type::AGGR_SUM, $3, token_name(sql_string, &@$));
     }
 
     | LENGTH_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, token_name(sql_string, &@1)); 
+      $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, nullptr, token_name(sql_string, &@$)); 
     }
-    | ROUND_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, token_name(sql_string, &@1));
+    | ROUND_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, $5, token_name(sql_string, &@$));
     }
-    | DATE_FORMAT_FUNC LBRACE complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, token_name(sql_string, &@1));
+    | DATE_FORMAT_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, $5, token_name(sql_string, &@$));
     }
-    | ID alias_attr {
+    | ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
       tmp->relation_name = "";
       tmp->attribute_name = $1;
-      if($2 != nullptr){
-        tmp->alias_name = $2;
-        free($2);
-      } else tmp->alias_name = "";
       tmp->need_extract = false;
       free($1);
       $$ = tmp;
     }
-    | ID DOT ID alias_attr{
+    | ID DOT ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
       tmp->relation_name  = $1;
       tmp->attribute_name = $3;
-      if($4 != nullptr){
-        tmp->alias_name = $4;
-        free($4);
-      } else tmp->alias_name = "";
       tmp->need_extract = false;
       free($1);
       free($3);
@@ -625,7 +635,6 @@ complex_expr:
       RelAttrSqlNode* attr = new RelAttrSqlNode;
       attr->relation_name  = "";
       attr->attribute_name = "*";
-      attr->alias_name = "";
       attr->need_extract = true;
       $$ = attr;
     }
@@ -671,24 +680,27 @@ complex_expr_list:
     {
       $$ = nullptr;
     }
-    | COMMA complex_expr complex_expr_list {
-      if ($3 != nullptr) {
-        $$ = $3;
+    | COMMA complex_expr alias_attr complex_expr_list {
+      if ($4 != nullptr) {
+        $$ = $4;
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
-
+      if($3 != nullptr)
+        $2->set_name(std::string($3));
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($2));
     }
     ;
 
 select_attr:
-    complex_expr complex_expr_list {
-      if ($2 != nullptr) {
-        $$ = $2;
+    complex_expr alias_attr complex_expr_list {
+      if ($3 != nullptr) {
+        $$ = $3;
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
+      if($2 != nullptr)
+        $1->set_name(std::string($2));
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($1));
     }
     ;
@@ -700,6 +712,9 @@ alias_attr:
     }
     | AS ID {
       $$ = $2;
+    }
+    | ID {
+      $$ = $1;
     }
 
 rel_list:
@@ -781,11 +796,32 @@ explain_stmt:
     ;
 
 set_variable_stmt:
-    SET ID EQ value
+    SET ID EQ value set_variable_list
     {
-      $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
-      $$->set_variable.name  = $2;
-      $$->set_variable.value = *$4;
+      if($5 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $5;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(*$4);
+      free($2);
+      delete $4;
+    }
+    ;
+
+set_variable_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    |COMMA ID EQ value set_variable_list
+    {
+      if($5 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $5;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(*$4);
       free($2);
       delete $4;
     }

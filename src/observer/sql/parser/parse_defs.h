@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 
 #include "sql/parser/value.h"
 #include "common/rc.h"
@@ -79,6 +80,8 @@ struct ValueSqlNode : public ExprSqlNode
      return VALUE_EXPR;
   };
   RC set_name(std::string n){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = n;
     return RC::SUCCESS;
   }
@@ -88,19 +91,16 @@ struct RelAttrSqlNode : public ExprSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
-  std::string alias_name;
 
   ExprSqlNode::Type get_type() const{
      return REL_ATTR_EXPR; 
   };
   RC set_name(bool table_disable){
-    if(name.empty()){
-      if(!alias_name.empty())
-      name = alias_name;
-    else if(relation_name.empty() || table_disable)
+    if(!name.empty())
+      return RC::SUCCESS;
+    if(relation_name.empty() || table_disable)
       name = attribute_name;
     else name = relation_name + '.' + attribute_name;
-    }
     return RC::SUCCESS;
   }
 };
@@ -119,16 +119,17 @@ struct ArithSqlNode : public ExprSqlNode
   ArithSqlNode::Type operation_type;
 
   ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {
-    // if(operation_type == Type::NEGATIVE){
-    //   need_extract = left->need_extract;
-    // }else need_extract = left->need_extract || right->need_extract;
-    need_extract = false;
+    if(operation_type == Type::NEGATIVE){
+      need_extract = l->need_extract;
+    }else need_extract = l->need_extract || r->need_extract;
   }
   virtual ~ArithSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return ARITHMATIC_EXPR; 
   };
   RC set_name(std::string n){
+    if(!name.empty())
+      return RC::SUCCESS;
     name = n;
     return RC::SUCCESS;
   }
@@ -158,35 +159,44 @@ struct ArithSqlNode : public ExprSqlNode
 struct AggrSqlNode : public ExprSqlNode{
   function_type func_type;
   std::unique_ptr<ExprSqlNode> son;
-  std::string function_name;
-  AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
-    need_extract = false;
+  // std::string function_name;
+  AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s) {
+    need_extract = (t == function_type::AGGR_COUNT) ? false : son->need_extract;
+    ExprSqlNode::set_name(n);
   }
   virtual ~AggrSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return AGGR_FUNC_EXPR; 
   };
-  RC set_name(){
-    name = function_name + "(" + son->name + ")";
-    return RC::SUCCESS;
-  }
+  // RC set_name(){
+  //   if(!name.empty())
+  //     return RC::SUCCESS;
+  //   name = function_name + "(" + son->name + ")";
+  //   return RC::SUCCESS;
+  // }
 };
 
 struct FuncSqlNode : public ExprSqlNode{
   function_type func_type;
-  std::unique_ptr<ExprSqlNode> son;
-  std::string function_name;
-  FuncSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s), function_name(n) {
-    need_extract = false;
+  std::unique_ptr<ExprSqlNode> son, attr;
+  // std::string function_name;
+  FuncSqlNode(function_type t, ExprSqlNode* s, ExprSqlNode* a, std::string n):func_type(t), son(s), attr(a) {
+    need_extract = son->need_extract;
+    ExprSqlNode::set_name(n);
   }
+  
   virtual ~FuncSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return FUNC_EXPR; 
   };
-  RC set_name(){
-    name = function_name + "(" + son->name + ")";
-    return RC::SUCCESS;
-  }
+  // RC set_name(){
+  //   if(!name.empty())
+  //     return RC::SUCCESS;
+  //   if(func_type == function_type::FUNC_LENGTH)
+  //   name = function_name + "(" + son->name + ")";
+  //   else name = function_name + "(" + son->name + "," + attr->name + ")";
+  //   return RC::SUCCESS;
+  // }
 };
 
 /**
@@ -283,8 +293,8 @@ struct DeleteSqlNode
 struct UpdateSqlNode
 {
   std::string                   relation_name;         ///< Relation to update
-  std::string                   attribute_name;        ///< 更新的字段，仅支持一个字段
-  Value                         value;                 ///< 更新的值，仅支持一个字段
+  std::vector<std::string>      name;                  ///< 更新的字段的名称
+  std::vector<Value>            value;                 ///< 更新的字段的值
   std::vector<ConditionSqlNode*> conditions;
 };
 
@@ -374,8 +384,9 @@ struct LoadDataSqlNode
  */
 struct SetVariableSqlNode
 {
-  std::string name;
-  Value       value;
+  // vector<std::pair<std::string, Value>> val_list;
+  std::vector<std::string> name;
+  std::vector<Value>       value;
 };
 
 class ParsedSqlNode;
