@@ -210,45 +210,50 @@ std::string Value::to_string() const
     return os.str();
 }
 
-int Value::compare(const Value& other) const
+int Value::compare(const Value &other) const
 {
-    if (this->attr_type_ == other.attr_type_) {
-        switch (this->attr_type_) {
-        case INTS: {
-            return common::compare_int((void*)&this->num_value_.int_value_, (void*)&other.num_value_.int_value_);
-        } break;
-        case FLOATS: {
-            return common::compare_float((void*)&this->num_value_.float_value_, (void*)&other.num_value_.float_value_);
-        } break;
-        case DATES: {
-            return common::compare_int((void*)&this->num_value_.date_value_, (void*)&other.num_value_.date_value_);
-        }
-        case CHARS: {
-            return common::compare_string((void*)this->str_value_.c_str(),
-                this->str_value_.length(),
-                (void*)other.str_value_.c_str(),
-                other.str_value_.length());
-        } break;
-        case BOOLEANS: {
-            return common::compare_int((void*)&this->num_value_.bool_value_, (void*)&other.num_value_.bool_value_);
-        }
-        case NULLS:{
-            return 0;
-        }
-        default: {
-            LOG_WARN("unsupported type: %d", this->attr_type_);
-        }
-        }
-    } else if (this->attr_type_ == INTS && other.attr_type_ == FLOATS) {
-        float this_data = this->num_value_.int_value_;
-        return common::compare_float((void*)&this_data, (void*)&other.num_value_.float_value_);
-    } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
-        float other_data = other.num_value_.int_value_;
-        return common::compare_float((void*)&this->num_value_.float_value_, (void*)&other_data);
-    } else if(this->attr_type_ == NULLS || other.attr_type_ == NULLS)
-        return false;
-    LOG_WARN("not supported");
-    return -1; // TODO return rc?
+  if (this->attr_type_ == other.attr_type_) {
+    switch (this->attr_type_) {
+      case INTS: {
+        return common::compare_int((void *)&this->num_value_.int_value_, (void *)&other.num_value_.int_value_);
+      } break;
+      case FLOATS: {
+        return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other.num_value_.float_value_);
+      } break;
+      case DATES: {
+        return common::compare_int((void *)&this->num_value_.date_value_, (void *)&other.num_value_.date_value_);
+      }
+      case CHARS: {
+        return common::compare_string((void *)this->str_value_.c_str(),
+            this->str_value_.length(),
+            (void *)other.str_value_.c_str(),
+            other.str_value_.length());
+      } break;
+      case BOOLEANS: {
+        return common::compare_int((void *)&this->num_value_.bool_value_, (void *)&other.num_value_.bool_value_);
+      }
+      case NULLS: {
+        return 0;
+      }
+      default: {
+        LOG_WARN("unsupported type: %d", this->attr_type_);
+      }
+    }
+  } else if (this->attr_type_ == INTS && other.attr_type_ == FLOATS) {
+    float this_data = this->num_value_.int_value_;
+    return common::compare_float((void *)&this_data, (void *)&other.num_value_.float_value_);
+  } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
+    float other_data = other.num_value_.int_value_;
+    return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
+  } else if (this->attr_type_ == NULLS || other.attr_type_ == NULLS) {
+    if (this->attr_type_ == NULLS) {
+      return -1;
+    } else {
+      return 1;
+    }
+  }
+  LOG_WARN("not supported");
+  return -1;  // TODO return rc?
 }
 
 int Value::get_int() const
