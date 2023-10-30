@@ -620,6 +620,11 @@ RC RecordFileHandler::update_record_field(const RID &rid, const FieldMeta *field
   return RC();
 }
 
+RC RecordFileHandler::set_null_field(const RID &rid, int field_id)
+{
+  return RC::SUCCESS;
+}
+
 RC RecordFileHandler::init_free_pages()
 {
   // 遍历当前文件上所有页面，找到没有满的页面

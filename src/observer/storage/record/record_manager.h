@@ -368,6 +368,8 @@ public:
    */
   RC update_record_field(const RID &rid, const FieldMeta *field, std::function<void(char *)> updater);
 
+  RC set_null_field(const RID &rid, int field_id);
+
 private:
   /**
    * @brief 初始化当前没有填满记录的页面，初始化free_pages_成员

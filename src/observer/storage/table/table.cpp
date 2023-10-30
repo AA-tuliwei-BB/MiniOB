@@ -269,7 +269,8 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
     }
   }
 
-  // 判断有没有变长数据
+  // 判断有没有变长数据或空数据
+  // MYTODO 空数据单独修改，不重新插入
   bool variable_flag = false;
   const TableMeta &table_meta = this->table_meta();
   for (auto &field : fields) {
@@ -278,17 +279,26 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       break;
     }
   }
+  bool null_flag = false;
+  for (auto &value : values) {
+    if (value.is_null()) {
+      null_flag = true;
+      break;
+    }
+  }
 
   Record after;
   // 若没有，则一个一个字段修改
-  if (!variable_flag) {
+  if (!variable_flag && !null_flag) {
     int fields_size = static_cast<int>(fields.size());
     for (int i = 0; i < fields_size; ++i) {
       const FieldMeta *field_meta = table_meta.field(fields[i].c_str());
-      auto updater = [&values, &i, &field_meta](char *data) {
-        memcpy(data, values[i].data(), field_meta->len());
-      };
-      record_handler_->update_record_field(rid, field_meta, updater);
+      if (field_meta->nullable() && values[i].is_null()) {
+        // MYTODO 优化，添加 set null
+      } else {
+        auto updater = [&values, &i, &field_meta](char *data) { memcpy(data, values[i].data(), field_meta->len()); };
+        record_handler_->update_record_field(rid, field_meta, updater);
+      }
     }
     get_record(rid, after);
   }
@@ -296,24 +306,30 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
   // 若有，则删除重新插入
   else {
     vector<Value> new_values;
-    auto         &field_meta = *table_meta_.field_metas();
+    auto         &field_meta         = *table_meta_.field_metas();
+
     for (int i = table_meta_.sys_field_num(); i < table_meta_.field_num(); ++i) {
       bool changed = false;
-      for (int i = 0; i < int(fields.size()); ++i) {
-        if (fields[i] == field_meta[i].name()) {
-          new_values.push_back(values[i]);
+      for (int j = 0; j < int(fields.size()); ++j) {
+        if (fields[j] == field_meta[i].name()) {
+          new_values.push_back(values[j]);
           changed = true;
           break;
         }
       }
       if (!changed) {
         Value cell;
-        cell.set_type(field_meta[i].type());
-        const char *record_data = before.data() + before.offset()[i];
-        cell.set_data(record_data, before.len());
-        new_values.push_back(cell);
+        if (before.is_null(i)) {
+          cell.set_null();
+        } else {
+          cell.set_type(field_meta[i].type());
+          const char *record_data = before.data() + before.offset()[i];
+          cell.set_data(record_data, before.len());
+          new_values.push_back(cell);
+        }
       }
     }
+
     RC rc = make_record(new_values.size(), new_values.data(), after);
     if (rc != RC::SUCCESS) {
       LOG_ERROR("Fail to make record when update");
