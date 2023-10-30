@@ -70,10 +70,15 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   }
   std::vector<Field> query_fields;
   std::vector<std::unique_ptr<Expression>> expressions;
+  std::vector<AggrFuncExpr*> aggr_list;
   std::vector<std::string> alias;
-  bool is_aggregate;
+  bool is_aggregate = (select_sql.expressions.size() != 0) ? select_sql.expressions[0]->is_aggregate : false;
   for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
     ExprSqlNode &cur = *select_sql.expressions[i];
+    if(cur.is_aggregate ^ is_aggregate){
+      LOG_WARN("mixed aggregate expression and non-aggregate type in one select statement.");
+      return RC::INVALID_ARGUMENT;
+    }
     if(cur.need_extract){
       int last_query_field = query_fields.size();
       for (Table *table : tables) {
@@ -81,40 +86,27 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
       }
       int cur_query_field = query_fields.size();
       for(int j = last_query_field; j < cur_query_field; ++j){
-        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j]);
+        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j], &aggr_list);
         if(build_result.second != RC::SUCCESS){
           LOG_WARN("fail to build expression. error code = %d.", build_result.second);
           return build_result.second;
         }
         
         ExprType expressionType = build_result.first->type();
-        if(i != static_cast<int>(select_sql.expressions.size()) - 1){
-          if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
-            LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
-          return RC::INVALID_ARGUMENT;
-          }
-        }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
       }
     }else {
-      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr);
+      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
       if(build_result.second != RC::SUCCESS){
         LOG_WARN("fail to build expression. error code = %d.", build_result.second);
         return build_result.second;
       }
       ExprType expressionType = build_result.first->type();
-      if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC && expressionType != ExprType::ARITHMETIC){
+      if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC && expressionType != ExprType::ARITHMETIC && expressionType != ExprType::VALUE){
         LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
         return RC::INVALID_ARGUMENT;
       }
-      if(i != static_cast<int>(select_sql.expressions.size()) - 1){
-        if(is_aggregate ^ (expressionType == ExprType::AGGRFUNC)){
-          LOG_WARN("mixed expression type(id = %d) in select statement.", static_cast<int>(expressionType));
-        return RC::INVALID_ARGUMENT;
-        }
-      }else is_aggregate = (expressionType == ExprType::AGGRFUNC);
-
       
       alias.push_back(cur.name);
       expressions.push_back(std::move(build_result.first));
@@ -141,11 +133,12 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
-  select_stmt->is_aggregate_ = expressions[0]->type() == ExprType::AGGRFUNC;
+  select_stmt->is_aggregate_ = is_aggregate;
   select_stmt->expressions_.swap(expressions);
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_.swap(alias);
+  select_stmt->aggr_list_.swap(aggr_list);
   select_stmt->filter_stmt_ = filter_stmt;
   
   stmt = select_stmt;

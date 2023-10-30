@@ -233,7 +233,7 @@ int Value::compare(const Value& other) const
             return common::compare_int((void*)&this->num_value_.bool_value_, (void*)&other.num_value_.bool_value_);
         }
         case NULLS:{
-            return false;
+            return 0;
         }
         default: {
             LOG_WARN("unsupported type: %d", this->attr_type_);
@@ -370,6 +370,41 @@ bool Value::make_negative(){
         default:
             LOG_WARN("type=%d cannot make negative.", attr_type_);
             return false;
+    }
+    return true;
+}
+
+bool Value::try_cast(AttrType type){
+    if(attr_type_ == AttrType::NULLS)
+        return true;
+    switch(type){
+        case INTS:{
+            num_value_.int_value_ = get_int();
+            attr_type_ = type;
+            break;
+        }
+        case FLOATS:{
+            num_value_.float_value_ = get_float();
+            attr_type_ = type;
+            break;
+        }
+        case CHARS:
+        case TEXTS:{
+            str_value_ = get_string();
+            if(str_value_.empty())
+            return false;
+            attr_type_ = type;
+            break;
+        }
+        case BOOLEANS:{
+            num_value_.bool_value_ = get_boolean();
+            attr_type_ = type;
+            break;
+        }
+        default:{
+            LOG_WARN("cast undefined(id=%d)", static_cast<int>(type));
+            return false;
+        }
     }
     return true;
 }

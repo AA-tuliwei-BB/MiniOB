@@ -101,4 +101,5 @@ std::vector<Table *> &tables,
 std::unordered_map<std::string, Table *> &table_map,
 std::vector<Field> &query_fields,
 std::string db_name,
-Field* star_replacement);
+Field* star_replacement,
+std::vector<AggrFuncExpr*>* aggr_list);

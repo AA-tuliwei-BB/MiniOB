@@ -429,12 +429,12 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
     if (field->type() != value.attr_type() && !(field->nullable() && value.is_null())) {
-      LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",
+      LOG_WARN("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",
                 table_meta_.name(), field->name(), field->type(), value.attr_type());
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
     if (!field->nullable() && value.is_null()) {
-      LOG_ERROR("Invalid null value. table name =%s, field name=%s",
+      LOG_WARN("Invalid null value. table name =%s, field name=%s",
                 table_meta_.name(), field->name());
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }

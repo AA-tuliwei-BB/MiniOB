@@ -121,7 +121,7 @@ RC LogicalPlanGenerator::create_plan(
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator());
   if (select_stmt->is_aggregate()) {
     // 聚合函数以聚合算子为根
-    unique_ptr<LogicalOperator> aggr_oper(new AggrFuncLogicalOperator(std::move(select_stmt->expression())));
+    unique_ptr<LogicalOperator> aggr_oper(new AggrFuncLogicalOperator(std::move(select_stmt->expression()), std::move(select_stmt->aggr_list())));
     if (predicate_oper) {
       if (table_oper) {
         predicate_oper->add_child(std::move(table_oper));

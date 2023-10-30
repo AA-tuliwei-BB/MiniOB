@@ -399,6 +399,7 @@ public:
   AttrType value_type() const override;
   bool is_attr() const { return false; }
 
+  void finish() { finished = true; };
   RC add_value(const Tuple &tuple);
   RC get_value(Value &value) const;
   RC get_value(const Tuple &tuple, Value &value) const { return RC::UNIMPLENMENT; }
@@ -440,4 +441,5 @@ private:
   Value sum_;
   Value min_;
   Value max_;
+  bool finished = false;
 };

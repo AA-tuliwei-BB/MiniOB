@@ -107,6 +107,7 @@ public:
     bool get_boolean() const;
     bool is_null() const;
     bool make_negative();
+    bool try_cast(AttrType type);
 
 private:
     AttrType attr_type_ = UNDEFINED;

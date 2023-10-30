@@ -121,6 +121,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         LE
         GE
         NE
+        IS_OP
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -770,6 +771,7 @@ comp_op:
     | LE { $$ = LESS_EQUAL; }
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
+    | IS_OP { $$ = IS; }
     | LK { $$ = LIKE;  }
     | NOT LK { $$ = NOT_LIKE;  }
     ;

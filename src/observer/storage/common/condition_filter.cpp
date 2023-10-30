@@ -154,7 +154,8 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     bool result = common::like_match(left_value.get_string(), right_value.get_string());
     return comp_op_ == NOT_LIKE ? !result : result;
   }
-
+  
+  if(comp_op_ != IS && (left_value.is_null() || right_value.is_null())) return false;
   int cmp_result = left_value.compare(right_value);
 
   switch (comp_op_) {
@@ -170,7 +171,8 @@ bool DefaultConditionFilter::filter(const Record &rec) const
       return cmp_result >= 0;
     case GREAT_THAN:
       return cmp_result > 0;
-
+    case IS:
+      return cmp_result == 0 || (left_value.is_null() && right_value.is_null()); 
     default:
       break;
   }

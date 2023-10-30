@@ -68,13 +68,16 @@ struct ExprSqlNode{
     return RC::SUCCESS;
   }
   std::string name;
-  bool need_extract;
+  bool need_extract, is_aggregate;
 };
 
 struct ValueSqlNode : public ExprSqlNode
 {
   Value val;
-  ValueSqlNode(Value v):val(v) {}
+  ValueSqlNode(Value v):val(v) {
+     is_aggregate = false;
+     need_extract = false;
+  }
   virtual ~ValueSqlNode() = default;
   ExprSqlNode::Type get_type() const{
      return VALUE_EXPR;
@@ -91,7 +94,10 @@ struct RelAttrSqlNode : public ExprSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
-
+  RelAttrSqlNode(){
+    is_aggregate = false;
+    need_extract = false;
+  }
   ExprSqlNode::Type get_type() const{
      return REL_ATTR_EXPR; 
   };
@@ -121,7 +127,11 @@ struct ArithSqlNode : public ExprSqlNode
   ArithSqlNode(ArithSqlNode::Type t, ExprSqlNode* l, ExprSqlNode* r):operation_type(t), left(l), right(r) {
     if(operation_type == Type::NEGATIVE){
       need_extract = l->need_extract;
-    }else need_extract = l->need_extract || r->need_extract;
+      is_aggregate = l->is_aggregate;
+    }else{
+      need_extract = l->need_extract || r->need_extract;
+      is_aggregate = l->is_aggregate || r->is_aggregate;
+    }
   }
   virtual ~ArithSqlNode() = default;
   ExprSqlNode::Type get_type() const{
@@ -162,6 +172,7 @@ struct AggrSqlNode : public ExprSqlNode{
   // std::string function_name;
   AggrSqlNode(function_type t, ExprSqlNode* s, std::string n):func_type(t), son(s) {
     need_extract = (t == function_type::AGGR_COUNT) ? false : son->need_extract;
+    is_aggregate = true;
     ExprSqlNode::set_name(n);
   }
   virtual ~AggrSqlNode() = default;
@@ -182,6 +193,7 @@ struct FuncSqlNode : public ExprSqlNode{
   // std::string function_name;
   FuncSqlNode(function_type t, ExprSqlNode* s, ExprSqlNode* a, std::string n):func_type(t), son(s), attr(a) {
     need_extract = son->need_extract;
+    is_aggregate = son->is_aggregate;
     ExprSqlNode::set_name(n);
   }
   
@@ -213,6 +225,7 @@ enum CompOp
   GREAT_THAN,   ///< ">"
   LIKE,         ///< LIKE
   NOT_LIKE,     ///< NOT_LIKE
+  IS,           ///< IS
   NO_OP
 };
 

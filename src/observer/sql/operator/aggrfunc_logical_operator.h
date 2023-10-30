@@ -12,12 +12,21 @@
 class AggrFuncLogicalOperator : public LogicalOperator
 {
 public:
-  AggrFuncLogicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
+  AggrFuncLogicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions, std::vector<AggrFuncExpr*> &&aggr_list)
   {
     expressions_.swap(expressions);
+    aggr_list_.swap(aggr_list);
   }
 
   virtual ~AggrFuncLogicalOperator() = default;
 
   LogicalOperatorType type() const override { return LogicalOperatorType::AGGRFUNC; }
+
+  std::vector<AggrFuncExpr*> &aggr_list()
+  {
+    return aggr_list_;
+  }
+
+private:
+  std::vector<AggrFuncExpr*> aggr_list_;  
 };

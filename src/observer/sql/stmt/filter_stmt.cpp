@@ -94,16 +94,17 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   std::vector<Table*> table_wrap;
   std::vector<Field> field_wrap;
+  std:
   table_wrap.push_back(default_table);
   std::pair<std::unique_ptr<Expression>, RC> left_parse = 
-  build_expression(condition.left_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr);
+  build_expression(condition.left_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr, nullptr);
   if(left_parse.second != RC::SUCCESS){
   LOG_WARN("Error when parsing arithmatic expression sql node's left son, error_code = %d.", left_parse.second);
   return left_parse.second;
   }
 
   std::pair<std::unique_ptr<Expression>, RC> right_parse = 
-  build_expression(condition.right_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr);
+  build_expression(condition.right_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr, nullptr);
   if(right_parse.second != RC::SUCCESS){
   LOG_WARN("Error when parsing arithmatic expression sql node's right son, error_code = %d.", right_parse.second);
   return right_parse.second;

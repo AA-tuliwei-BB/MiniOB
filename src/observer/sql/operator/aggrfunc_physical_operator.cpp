@@ -40,17 +40,20 @@ RC AggrFuncPhysicalOperator::next()
     }
 
     RowTuple *row_tuple = static_cast<RowTuple *>(tuple);
-    int expr_size = static_cast<int>(expressions_.size());
+    int expr_size = static_cast<int>(aggr_list_.size());
     for (int i = 0; i < expr_size; ++i) {
-      AggrFuncExpr *expr = static_cast<AggrFuncExpr *>(expressions_[i].get());
+      AggrFuncExpr *expr = aggr_list_[i];
       rc = expr->add_value(*row_tuple);
       if (rc != RC::SUCCESS) {
-        LOG_WARN("failed to delete record: %s", strrc(rc));
+        LOG_WARN("failed to add value: %s", strrc(rc));
         return rc;
       }
     }
   }
-
+  for (auto &it : aggr_list_) {
+    it->finish();
+  }
+  
   int cell_num = tuple_.cell_num();
   for (int i = 0; i < cell_num; i++) {
     Value value;

@@ -352,7 +352,7 @@ RC PhysicalPlanGenerator::create_plan(AggrFuncLogicalOperator &aggrfunc_oper, st
     }
   }
 
-  oper = unique_ptr<PhysicalOperator>(new AggrFuncPhysicalOperator(std::move(aggrfunc_oper.expressions())));
+  oper = unique_ptr<PhysicalOperator>(new AggrFuncPhysicalOperator(std::move(aggrfunc_oper.expressions()), std::move(aggrfunc_oper.aggr_list())));
 
   if (child_physical_oper) {
     oper->add_child(std::move(child_physical_oper));

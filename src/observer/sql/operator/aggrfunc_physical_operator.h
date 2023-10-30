@@ -6,8 +6,8 @@
 class AggrFuncPhysicalOperator : public PhysicalOperator
 {
 public:
-  AggrFuncPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
-    : expressions_(std::move(expressions)), tuple_(expressions_)
+  AggrFuncPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions, std::vector<AggrFuncExpr*> &&aggr_list)
+    : expressions_(std::move(expressions)), tuple_(expressions_), aggr_list_(aggr_list)
   {}
 
   virtual ~AggrFuncPhysicalOperator() = default;
@@ -41,6 +41,7 @@ public:
 
 private:
   std::vector<std::unique_ptr<Expression>> expressions_;
+  std::vector<AggrFuncExpr*> aggr_list_;
   ExpressionTuple tuple_;
   bool emitted_ = false;
   Trx *trx_ = nullptr;

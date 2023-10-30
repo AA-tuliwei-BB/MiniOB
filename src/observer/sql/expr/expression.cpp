@@ -98,7 +98,7 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     return rc;
   }
   result = false;
-  if(left.is_null() || right.is_null()) return rc;
+  if(comp_ != IS && (left.is_null() || right.is_null())) return rc;
   int cmp_result = left.compare(right);
   switch (comp_) {
     case EQUAL_TO: {
@@ -118,6 +118,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     } break;
     case GREAT_THAN: {
       result = (cmp_result > 0);
+    } break;
+    case IS:{
+      result = cmp_result == 0 && !(left.is_null() ^ right.is_null()); 
     } break;
     default: {
       LOG_WARN("unsupported comparison. %d", comp_);
@@ -488,6 +491,9 @@ RC AggrFuncExpr::get_value(Value &value) const
 
 RC AggrFuncExpr::try_get_value(Value &value) const
 {
+  if(finished){
+    return get_value(value);
+  }
   Value son_value;
   RC rc = son_->try_get_value(son_value);
   if (rc != RC::SUCCESS) {

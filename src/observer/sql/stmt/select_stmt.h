@@ -58,6 +58,10 @@ public:
   {
     return alias_;
   }
+  std::vector<AggrFuncExpr*> &aggr_list()
+  {
+    return aggr_list_;
+  }
   std::vector<std::unique_ptr<Expression>> &expression()
   {
     return expressions_;
@@ -77,6 +81,7 @@ private:
   std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
+  std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
   

@@ -14,17 +14,29 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+//     enum AttrType {
+//     UNDEFINED,
+//     CHARS, ///< 字符串类型
+//     INTS, ///< 整数类型(4字节)
+//     DATES, ///< 日期类型(4字节)
+//     FLOATS, ///< 浮点数类型(4字节)
+//     NULLS, ///< 空类型(4字节)
+//     BOOLEANS, ///< boolean类型，当前不是由parser解析出来的，是程序内部使用的
+//     TEXTS,
+// };
+#include <string>
 namespace common {
-const bool field_type_compare_compatible_table[7][7] = {
-    0, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 1, 1, 1,
-    0, 1, 1, 0, 1, 1, 1,
-    0, 0, 0, 1, 0, 1, 1,
-    0, 1, 1, 0, 1, 1, 1,
-    0, 1, 1, 1, 1, 1, 1,
-    0, 1, 1, 1, 1, 1, 1,
-};
 
+inline bool field_type_compare_compatible_table[8][8] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 0, 1, 1, 1, 1,
+    0, 1, 1, 0, 1, 1, 1, 1,
+    0, 0, 0, 1, 0, 1, 1, 1,
+    0, 1, 1, 0, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1, 1,
+};
 int compare_int(void* arg1, void* arg2);
 int compare_float(void* arg1, void* arg2);
 int compare_string(void* arg1, int arg1_max_length, void* arg2, int arg2_max_length);
