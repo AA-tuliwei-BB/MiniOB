@@ -155,7 +155,7 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     return comp_op_ == NOT_LIKE ? !result : result;
   }
   
-  if(comp_op_ != IS && (left_value.is_null() || right_value.is_null())) return false;
+  if(comp_op_ != IS && comp_op_ != IS_NOT && (left_value.is_null() || right_value.is_null())) return false;
   int cmp_result = left_value.compare(right_value);
 
   switch (comp_op_) {
@@ -173,6 +173,8 @@ bool DefaultConditionFilter::filter(const Record &rec) const
       return cmp_result > 0;
     case IS:
       return cmp_result == 0 || (left_value.is_null() && right_value.is_null()); 
+    case IS_NOT:
+      return cmp_result != 0 && (left_value.is_null() && right_value.is_null()); 
     default:
       break;
   }

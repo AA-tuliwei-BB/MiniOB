@@ -98,7 +98,7 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     return rc;
   }
   result = false;
-  if(comp_ != IS && (left.is_null() || right.is_null())) return rc;
+  if(comp_ != IS && comp_ != IS_NOT && (left.is_null() || right.is_null())) return rc;
   int cmp_result = left.compare(right);
   switch (comp_) {
     case EQUAL_TO: {
@@ -119,8 +119,11 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     case GREAT_THAN: {
       result = (cmp_result > 0);
     } break;
-    case IS:{
+    case IS: {
       result = cmp_result == 0 && !(left.is_null() ^ right.is_null()); 
+    } break;
+    case IS_NOT: {
+      result = cmp_result != 0 || (left.is_null() ^ right.is_null()); 
     } break;
     default: {
       LOG_WARN("unsupported comparison. %d", comp_);

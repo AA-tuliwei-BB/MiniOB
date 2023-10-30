@@ -69,11 +69,10 @@ int compare_string(void* arg1, int arg1_max_length, void* arg2, int arg2_max_len
 
 bool like_match(const std::string &s1, const std::string &s2){
   int l1 = s1.length(), l2 = s2.length();
-  std::vector<uint8_t> state((l1 + 1) * (l2 + 1) + 1, 0);
+  std::vector<bool> state((l1 + 1) * (l2 + 1) + 1, 0);
   /*state ::=
   * first i characters in s2(i.e s2[0..i-1]) and first j characters in s1 can match -> state[i * (l1 + 1) + j] = true;
   * else state[i * (l1 + 1) + j] = false;
-  * use uint8_t instead of bool to avoid unnecessary problems.
   */
   state[0] = 1;
   bool can_match = true;
