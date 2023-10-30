@@ -40,6 +40,6 @@ private:
 private:
   Type func_type_;
   std::unique_ptr<Expression> son_;
-  std::string format_string_;
-  int round_bits_;
+  std::string format_string_ = "%Y-%m-%d";
+  int round_bits_ = 0;
 };

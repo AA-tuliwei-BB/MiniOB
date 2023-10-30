@@ -276,11 +276,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
       break;
     }
     std::unique_ptr<FuncExpr> result(new FuncExpr(result_type, std::move(son_parse.first)));
-    if(result_type == FuncExpr::Type::LENGTH){
-      // cur.set_name();
-      // result->set_name(cur.name[0]);
-      return std::make_pair(std::move(result), RC::SUCCESS);
-    }else {
+    if(result_type != FuncExpr::Type::LENGTH && cur.attr.get() != nullptr) {
       auto attr_parse = build_expression(cur.attr.get(), tables, table_map, query_fields, db_name, star_replacement, aggr_list);
       // cur.set_name();
       // result->set_name(cur.name[0]);
@@ -294,8 +290,8 @@ std::vector<AggrFuncExpr*>* aggr_list){
       if(result_type == FuncExpr::Type::ROUND){
         result->set_round_bits(attr.get_int());
       } else result->set_format_string(attr.get_string());
-      return std::make_pair(std::move(result), RC::SUCCESS);
     }
+    return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
   case ExprSqlNode::Type::ARITHMATIC_EXPR:{

@@ -172,6 +172,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <expression_list>     expression_list
 %type <complex_expr>        complex_expr
 %type <complex_expr_list>   complex_expr_list
+%type <complex_expr>        possible_argument
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
 %type <sql_node>            insert_stmt
@@ -609,11 +610,11 @@ complex_expr:
     | LENGTH_FUNC LBRACE complex_expr RBRACE {
       $$ = new FuncSqlNode(function_type::FUNC_LENGTH, $3, nullptr, token_name(sql_string, &@$)); 
     }
-    | ROUND_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, $5, token_name(sql_string, &@$));
+    | ROUND_FUNC LBRACE complex_expr possible_argument RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_ROUND, $3, $4, token_name(sql_string, &@$));
     }
-    | DATE_FORMAT_FUNC LBRACE complex_expr COMMA complex_expr RBRACE {
-      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, $5, token_name(sql_string, &@$));
+    | DATE_FORMAT_FUNC LBRACE complex_expr possible_argument RBRACE {
+      $$ = new FuncSqlNode(function_type::FUNC_DATE_FORMAT, $3, $4, token_name(sql_string, &@$));
     }
     | ID {
       RelAttrSqlNode* tmp = new RelAttrSqlNode;
@@ -676,6 +677,16 @@ complex_expr:
       delete $1;
     }
 
+possible_argument:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | COMMA complex_expr
+    {
+      $$ = $2;
+    }
+    ;
 complex_expr_list:
     /* empty */
     {
