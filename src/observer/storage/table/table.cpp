@@ -325,8 +325,8 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
           cell.set_type(field_meta[i].type());
           const char *record_data = before.data() + before.offset()[i];
           cell.set_data(record_data, before.len());
-          new_values.push_back(cell);
         }
+        new_values.push_back(cell);
       }
     }
 
