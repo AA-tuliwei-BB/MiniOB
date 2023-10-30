@@ -27,6 +27,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/update_logical_operator.h"
 #include "sql/operator/aggrfunc_logical_operator.h"
 #include "sql/operator/expression_logical_operator.h"
+#include "sql/operator/orderby_logical_operator.h"
 
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/calc_stmt.h"
@@ -118,37 +119,48 @@ RC LogicalPlanGenerator::create_plan(
     return rc;
   }
 
+  unique_ptr<LogicalOperator> orderby_oper(nullptr);
+  if (select_stmt->orders_fields().size() != 0) {
+    orderby_oper = unique_ptr<LogicalOperator>(
+        new OrderbyLogicalOperator(select_stmt->query_fields(), select_stmt->orders_fields(), select_stmt->asc()));
+  }
+
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator());
+  unique_ptr<LogicalOperator> root_oper(nullptr);
   if (select_stmt->is_aggregate()) {
     // 聚合函数以聚合算子为根
-    unique_ptr<LogicalOperator> aggr_oper(new AggrFuncLogicalOperator(std::move(select_stmt->expression()), std::move(select_stmt->aggr_list())));
-    if (predicate_oper) {
-      if (table_oper) {
-        predicate_oper->add_child(std::move(table_oper));
-      }
-      aggr_oper->add_child(std::move(predicate_oper));
-    } else {
-      if (table_oper) {
-        aggr_oper->add_child(std::move(table_oper));
-      }
-    }
-    project_oper->add_child(std::move(aggr_oper));
-
+    root_oper = unique_ptr<LogicalOperator> (new AggrFuncLogicalOperator(std::move(select_stmt->expression()), std::move(select_stmt->aggr_list())));
   } else {
     // 普通表达式以表达式算子为根
-    unique_ptr<LogicalOperator> expr_oper(new ExpressionLogicalOperator(std::move(select_stmt->expression())));
+    root_oper = unique_ptr<LogicalOperator> (new ExpressionLogicalOperator(std::move(select_stmt->expression())));
+  }
+
+  if (predicate_oper) {
+    if (table_oper) {
+      predicate_oper->add_child(std::move(table_oper));
+    }
+  }
+
+  if (orderby_oper) {
     if (predicate_oper) {
-      if (table_oper) {
-        predicate_oper->add_child(std::move(table_oper));
-      }
-      expr_oper->add_child(std::move(predicate_oper));
+      orderby_oper->add_child(std::move(predicate_oper));
     } else {
       if (table_oper) {
-        expr_oper->add_child(std::move(table_oper));
+        orderby_oper->add_child(std::move(table_oper));
       }
     }
-    project_oper->add_child(std::move(expr_oper));
+    root_oper->add_child(std::move(orderby_oper));
+  } else {
+    if (predicate_oper) {
+      root_oper->add_child(std::move(predicate_oper));
+    } else {
+      if (table_oper) {
+        root_oper->add_child(std::move(table_oper));
+      }
+    }
   }
+  project_oper->add_child(std::move(root_oper));
+
   logical_operator.swap(project_oper);
   return RC::SUCCESS;
 }

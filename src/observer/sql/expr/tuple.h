@@ -137,6 +137,16 @@ class RowTuple : public Tuple
 {
 public:
   RowTuple() = default;
+
+  RowTuple(const RowTuple &other) {
+    record_ = other.record_;
+    table_ = other.table_;
+    this->speces_.reserve(other.speces_.size());
+    for (const auto &fieldexpr : other.speces_) {
+      speces_.push_back(new FieldExpr(fieldexpr->field()));
+    }
+  }
+
   virtual ~RowTuple()
   {
     for (FieldExpr *spec : speces_) {
@@ -360,6 +370,63 @@ public:
 private:
   const std::vector<std::unique_ptr<Expression>> &expressions_;
   Tuple *child_tuple_ = nullptr;
+};
+
+/**
+ * @brief 一些带描述的常量值组成的Tuple
+ * @ingroup Tuple
+ */
+class SpecValueListTuple : public Tuple 
+{
+public:
+  SpecValueListTuple() = default;
+  virtual ~SpecValueListTuple() {
+    for (TupleCellSpec *spec : speces_) {
+      delete spec;
+    }
+  }
+
+  void set_cells(const std::vector<Value> &cells)
+  {
+    cells_ = cells;
+  }
+
+  void set_speces(const std::vector<TupleCellSpec *> &speces)
+  {
+    speces_ = speces;
+  }
+
+  virtual int cell_num() const override
+  {
+    return static_cast<int>(cells_.size());
+  }
+
+  virtual RC cell_at(int index, Value &cell) const override
+  {
+    if (index < 0 || index >= cell_num()) {
+      return RC::NOTFOUND;
+    }
+
+    cell = cells_[index];
+    return RC::SUCCESS;
+  }
+
+  virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override
+  {
+    const char *table_name = spec.table_name();
+    const char *field_name = spec.field_name();
+
+    for (size_t i = 0; i < speces_.size(); ++i) {
+      if (0 == strcmp(table_name, speces_[i]->table_name()) && 0 == strcmp(field_name, speces_[i]->field_name())) {
+        return cell_at(i, cell);
+      }
+    }
+    return RC::NOTFOUND;
+  }
+
+private:
+  std::vector<Value> cells_;
+  std::vector<TupleCellSpec *> speces_;
 };
 
 /**

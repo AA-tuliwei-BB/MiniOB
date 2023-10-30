@@ -74,6 +74,14 @@ public:
   {
     return is_aggregate_;
   }
+  const std::vector<Field>& orders_fields() const
+  {
+    return orders_fields_;
+  }
+  const std::vector<bool>& asc() const
+  {
+    return asc_;
+  }
 
 private:
   bool is_aggregate_;
@@ -84,5 +92,7 @@ private:
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
+  std::vector<Field> orders_fields_;
+  std::vector<bool> asc_; // 是否升序
   
 };

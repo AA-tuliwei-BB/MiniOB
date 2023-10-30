@@ -31,6 +31,7 @@ class JoinLogicalOperator;
 class CalcLogicalOperator;
 class AggrFuncLogicalOperator;
 class ExpressionLogicalOperator;
+class OrderbyLogicalOperator;
 
 /**
  * @brief 物理计划生成器
@@ -58,4 +59,5 @@ private:
   RC create_plan(UpdateLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(AggrFuncLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(ExpressionLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
+  RC create_plan(OrderbyLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
 };

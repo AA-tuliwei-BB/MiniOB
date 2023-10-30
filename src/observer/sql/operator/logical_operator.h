@@ -43,6 +43,7 @@ enum class LogicalOperatorType
   EXPLAIN,     ///< 查看执行计划
   AGGRFUNC,    ///< 聚合函数
   EXPRESSION,  ///< 表达式
+  ORDERBY,     ///< 排序
 };
 
 /**

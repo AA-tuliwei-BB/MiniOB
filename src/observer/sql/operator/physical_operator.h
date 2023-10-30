@@ -49,6 +49,7 @@ enum class PhysicalOperatorType
   INSERT,
   AGGRFUNC,
   EXPRESSION,
+  ORDERBY,
 };
 
 /**
