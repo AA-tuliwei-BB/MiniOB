@@ -286,12 +286,12 @@ struct SelectSqlNode
   std::vector<ConditionSqlNode*>                  conditions;     ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<OrderBySqlNode>>    orders;         ///< 排序条件
   JoinSqlNode*                                    joins;          ///< inner join语句
-  ~SelectSqlNode() {
-    for(auto &it : conditions){
-      delete it;
-    }
-    delete joins;
-  }
+  // ~SelectSqlNode() {
+  //   for(auto &it : conditions){
+  //     delete it;
+  //   }
+  //   delete joins;
+  // }  
 };
 
 /**

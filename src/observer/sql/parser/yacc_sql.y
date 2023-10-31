@@ -342,7 +342,7 @@ create_index_stmt:    /*create index 语句的语法解析树*/
 id_list:
     /* empty */
     {
-      $$ = nullptr;
+      $$ = nullptr; 
     }
     | COMMA ID id_list
     {
