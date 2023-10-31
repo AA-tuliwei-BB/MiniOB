@@ -260,14 +260,6 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
   // 删除原索引，修改，创建新索引
   Record before;
   get_record(rid, before);
-  for (auto index : this->indexes_) {
-    for (std::string field_name : fields) {
-      if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->delete_entry(before, &rid);
-        break;
-      }
-    }
-  }
 
   // 判断有没有变长数据或空数据
   // MYTODO 空数据单独修改，不重新插入
@@ -290,6 +282,14 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
   Record after;
   // 若没有，则一个一个字段修改
   if (!variable_flag && !null_flag) {
+    for (auto index : this->indexes_) {
+      for (std::string field_name : fields) {
+        if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
+          index->delete_entry(before, &rid);
+          break;
+        }
+      }
+    }
     int fields_size = static_cast<int>(fields.size());
     for (int i = 0; i < fields_size; ++i) {
       const FieldMeta *field_meta = table_meta.field(fields[i].c_str());
@@ -301,6 +301,20 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       }
     }
     get_record(rid, after);
+
+    for (auto index : this->indexes_) {
+      for (std::string field_name : fields) {
+        if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
+          RC rc = index->insert_entry(after, &rid);
+          if (rc != RC::SUCCESS) {
+            record_handler_->delete_record(&rid);
+            record_handler_->insert_record(before, &before.rid());
+            return rc;
+          }
+          break;
+        }
+      }
+    }
   }
 
   // 若有，则删除重新插入
@@ -337,15 +351,6 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
     }
     record_handler_->delete_record(&rid);
     record_handler_->insert_record(after, &after.rid());
-  }
-
-  for (auto index : this->indexes_) {
-    for (std::string field_name : fields) {
-      if (0 == strcmp(index->index_meta().field(), field_name.c_str())) {
-        index->insert_entry(after, &rid);
-        break;
-      }
-    }
   }
   return RC::SUCCESS;
 }

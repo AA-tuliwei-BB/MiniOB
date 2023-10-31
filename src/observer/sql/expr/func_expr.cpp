@@ -95,7 +95,7 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     if (day.size() == 1) {
       day = "0" + day;
     }
-    if (Day[1] == '1') {
+    if (Day[1] == '1' && Day[0] != '1') {
       Day = Day + "st";
     } else if (Day[1] == '2') {
       Day = Day + "nd";
