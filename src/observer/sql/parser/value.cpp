@@ -246,11 +246,7 @@ int Value::compare(const Value &other) const
     float other_data = other.num_value_.int_value_;
     return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
   } else if (this->attr_type_ == NULLS || other.attr_type_ == NULLS) {
-    if (this->attr_type_ == NULLS) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return -1;
   }
   LOG_WARN("not supported");
   return -1;  // TODO return rc?

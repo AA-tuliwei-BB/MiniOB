@@ -84,14 +84,23 @@ RC OrderbyPhysicalOperator::open(Trx *trx)
   auto &asc        = asc_;
   auto cmp = [&order_size, &asc](const std::vector<Value> &a, const std::vector<Value>&b) {
     for (int i = 0; i < order_size; ++i) {
+      if (a[i].attr_type() == NULLS || b[i].attr_type() == NULLS) {
+        if (a[i].attr_type() != b[i].attr_type()) {
+          if (a[i].attr_type() == NULLS) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      }
       int cmp_ret = a[i].compare(b[i]);
       if(cmp_ret == 0) {
         continue;
       } else {
         if (asc[i]) {
-          return cmp_ret > 0;
-        } else {
           return cmp_ret < 0;
+        } else {
+          return cmp_ret > 0;
         }
       }
     }
