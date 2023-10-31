@@ -89,7 +89,16 @@ RC BplusTreeIndex::close()
 
 RC BplusTreeIndex::insert_entry(const Record &record, const RID *rid)
 {
-  return index_handler_.insert_entry(record.data() + record.offset()[field_meta_.id()], rid);
+  const char * data = record.data() + record.offset()[field_meta_.id()];
+  if (is_unique()) {
+    std::list<RID> rids;
+    index_handler_.get_entry(data, field_meta_.len(), rids);
+    if (rids.size() != 0) {
+      LOG_WARN("Insert duplicate values to unique index!");
+      return RC::INTERNAL;
+    }
+  }
+  return index_handler_.insert_entry(data, rid);
 }
 
 RC BplusTreeIndex::delete_entry(const Record &record, const RID *rid)
