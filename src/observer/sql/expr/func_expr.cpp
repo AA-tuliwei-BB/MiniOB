@@ -86,10 +86,25 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     if (month.size() == 1) {
       month = "0" + month;
     }
+    std::string MonthList[] = {"January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December"};
+    std::string Month = MonthList[date / 100 % 100 - 1];
+    
     std::string day(std::to_string(date % 100));
+    std::string Day(day);
     if (day.size() == 1) {
       day = "0" + day;
     }
+    if (Day[1] == '1') {
+      Day = Day + "st";
+    } else if (Day[1] == '2') {
+      Day = Day + "nd";
+    } else if (Day[1] == '3') {
+      Day = Day + "rd";
+    } else {
+      Day = Day + "th";
+    }
+
     size_t found_place;
     while ((found_place = formatted.find("%Y")) != std::string::npos) {
       formatted.replace(found_place, 2, year);
@@ -100,8 +115,14 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     while ((found_place = formatted.find("%m")) != std::string::npos) {
       formatted.replace(found_place, 2, month);
     }
+    while ((found_place = formatted.find("%M")) != std::string::npos) {
+      formatted.replace(found_place, 2, Month);
+    }
     while ((found_place = formatted.find("%d")) != std::string::npos) {
       formatted.replace(found_place, 2, day);
+    }
+    while ((found_place = formatted.find("%D")) != std::string::npos) {
+      formatted.replace(found_place, 2, Day);
     }
     value.set_string(formatted.c_str());
   } break;
