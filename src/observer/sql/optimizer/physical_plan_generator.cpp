@@ -112,64 +112,64 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
   // 看看是否有可以用于索引查找的表达式
   Table *table = table_get_oper.table();
 
-  Index *index = nullptr;
-  ValueExpr *value_expr = nullptr;
-  for (auto &expr : predicates) {
-    if (expr->type() == ExprType::COMPARISON) {
-      auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
-      // 简单处理，就找等值查询
-      if (comparison_expr->comp() != EQUAL_TO) {
-        continue;
-      }
+  // Index *index = nullptr;
+  // ValueExpr *value_expr = nullptr;
+  // for (auto &expr : predicates) {
+  //   if (expr->type() == ExprType::COMPARISON) {
+  //     auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
+  //     // 简单处理，就找等值查询
+  //     if (comparison_expr->comp() != EQUAL_TO) {
+  //       continue;
+  //     }
 
-      unique_ptr<Expression> &left_expr = comparison_expr->left();
-      unique_ptr<Expression> &right_expr = comparison_expr->right();
-      // 左右比较的一边最少是一个值
-      if (left_expr->type() != ExprType::VALUE && right_expr->type() != ExprType::VALUE) {
-        continue;
-      }
+  //     unique_ptr<Expression> &left_expr = comparison_expr->left();
+  //     unique_ptr<Expression> &right_expr = comparison_expr->right();
+  //     // 左右比较的一边最少是一个值
+  //     if (left_expr->type() != ExprType::VALUE && right_expr->type() != ExprType::VALUE) {
+  //       continue;
+  //     }
 
-      FieldExpr *field_expr = nullptr;
-      if (left_expr->type() == ExprType::FIELD) {
-        ASSERT(right_expr->type() == ExprType::VALUE, "right expr should be a value expr while left is field expr");
-        field_expr = static_cast<FieldExpr *>(left_expr.get());
-        value_expr = static_cast<ValueExpr *>(right_expr.get());
-      } else if (right_expr->type() == ExprType::FIELD) {
-        ASSERT(left_expr->type() == ExprType::VALUE, "left expr should be a value expr while right is a field expr");
-        field_expr = static_cast<FieldExpr *>(right_expr.get());
-        value_expr = static_cast<ValueExpr *>(left_expr.get());
-      }
+  //     FieldExpr *field_expr = nullptr;
+  //     if (left_expr->type() == ExprType::FIELD) {
+  //       ASSERT(right_expr->type() == ExprType::VALUE, "right expr should be a value expr while left is field expr");
+  //       field_expr = static_cast<FieldExpr *>(left_expr.get());
+  //       value_expr = static_cast<ValueExpr *>(right_expr.get());
+  //     } else if (right_expr->type() == ExprType::FIELD) {
+  //       ASSERT(left_expr->type() == ExprType::VALUE, "left expr should be a value expr while right is a field expr");
+  //       field_expr = static_cast<FieldExpr *>(right_expr.get());
+  //       value_expr = static_cast<ValueExpr *>(left_expr.get());
+  //     }
 
-      if (field_expr == nullptr) {
-        continue;
-      }
+  //     if (field_expr == nullptr) {
+  //       continue;
+  //     }
 
-      const Field &field = field_expr->field();
-      index = table->find_index_by_field(field.field_name());
-      if (nullptr != index) {
-        break;
-      }
-    }
-  }
+  //     const Field &field = field_expr->field();
+  //     index = table->find_index_by_field(field.field_name());
+  //     if (nullptr != index) {
+  //       break;
+  //     }
+  //   }
+  // }
 
-  if (index != nullptr) {
-    ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
+  // if (index != nullptr) {
+  //   ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
-    const Value &value = value_expr->get_value();
-    IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(
-          table, index, table_get_oper.readonly(), 
-          &value, true /*left_inclusive*/, 
-          &value, true /*right_inclusive*/);
+  //   const Value &value = value_expr->get_value();
+  //   IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(
+  //         table, index, table_get_oper.readonly(), 
+  //         &value, true /*left_inclusive*/, 
+  //         &value, true /*right_inclusive*/);
           
-    index_scan_oper->set_predicates(std::move(predicates));
-    oper = unique_ptr<PhysicalOperator>(index_scan_oper);
-    LOG_TRACE("use index scan");
-  } else {
+  //   index_scan_oper->set_predicates(std::move(predicates));
+  //   oper = unique_ptr<PhysicalOperator>(index_scan_oper);
+  //   LOG_TRACE("use index scan");
+  // } else {
     auto table_scan_oper = new TableScanPhysicalOperator(table, table_get_oper.readonly());
     table_scan_oper->set_predicates(std::move(predicates));
     oper = unique_ptr<PhysicalOperator>(table_scan_oper);
     LOG_TRACE("use table scan");
-  }
+  // }
 
   return RC::SUCCESS;
 }
