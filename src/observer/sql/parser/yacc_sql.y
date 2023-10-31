@@ -70,6 +70,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         DROP
         TABLE
         TABLES
+        UNIQUE
         INDEX
         CALC
         MAX_FUNC
@@ -103,6 +104,8 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         DOT //QUOTE
         INTO
         VALUES
+        INNER
+        JOIN
         FROM
         WHERE
         ORDER_BY
@@ -137,6 +140,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
   Expression *                      expression;
   std::vector<Expression *> *       expression_list;
   ExprSqlNode *                     complex_expr;
+  JoinSqlNode *                     join_attr;
   std::vector<std::unique_ptr<ExprSqlNode>> *  complex_expr_list;
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode*> *  condition_list;
@@ -171,16 +175,19 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <relation_list>       from
 %type <condition_list>      where
 %type <condition_list>      condition_list
+%type <condition_list>      on_attr
 %type <order_by_list>       order_by_list
 %type <order_by_list>       order_by_stmt
 %type <bools>               order_type
 %type <complex_expr_list>   select_attr
 %type <relation_list>       rel_list
+%type <relation_list>       id_list
 %type <expression>          expression
 %type <expression_list>     expression_list
 %type <complex_expr>        complex_expr
 %type <complex_expr_list>   complex_expr_list
 %type <complex_expr>        possible_argument
+%type <join_attr>           join_attr
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
 %type <sql_node>            insert_stmt
@@ -298,16 +305,52 @@ desc_table_stmt:
     ;
 
 create_index_stmt:    /*create index 语句的语法解析树*/
-    CREATE INDEX ID ON ID LBRACE ID RBRACE
+    CREATE INDEX ID ON ID LBRACE ID id_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
       CreateIndexSqlNode &create_index = $$->create_index;
       create_index.index_name = $3;
+      create_index.unique = false;
       create_index.relation_name = $5;
-      create_index.attribute_name = $7;
+      if ($8 != nullptr) {
+        create_index.attribute_name.swap(*$8);
+        delete $8;
+      }
+      create_index.attribute_name.push_back(std::string($7));
       free($3);
       free($5);
       free($7);
+    }
+    | CREATE UNIQUE INDEX ID ON ID LBRACE ID id_list RBRACE
+    {
+      $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
+      CreateIndexSqlNode &create_index = $$->create_index;
+      create_index.index_name = $4;
+      create_index.unique = true;
+      create_index.relation_name = $6;
+      if ($9 != nullptr) {
+        create_index.attribute_name.swap(*$9);
+        delete $9;
+      }
+      create_index.attribute_name.push_back(std::string($8));
+      free($4);
+      free($6);
+      free($8);
+    }
+    ;
+
+id_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | COMMA ID id_list
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else $$ = new std::vector<std::string>;
+      $$->emplace_back(std::string($2));
+      free($2);
     }
     ;
 
@@ -506,7 +549,7 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr from where order_by_stmt
+    SELECT select_attr from join_attr where order_by_stmt
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -519,14 +562,16 @@ select_stmt:        /*  select 语句的语法解析树*/
         delete $3;
       }
       
-      if ($4 != nullptr) {
-        $$->selection.conditions.swap(*$4);
-        delete $4;
+      $$->selection.joins = $4;
+      
+      if ($5 != nullptr) {
+        $$->selection.conditions.swap(*$5);
+        delete $5;
       }
 
-      if ($5 != nullptr){
-        $$->selection.orders.swap(*$5);
-        delete $5;
+      if ($6 != nullptr){
+        $$->selection.orders.swap(*$6);
+        delete $6;
       }
     }
     ;
@@ -552,6 +597,42 @@ from:
     }
     ;
 
+join_attr:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | INNER JOIN ID alias_attr rel_list on_attr
+    {
+      $$ = new JoinSqlNode;
+      if ($5 != nullptr) {
+        $$->join_list.swap(*$5);
+        delete $5;
+      }
+      $$->join_list.push_back($3);
+      if($4 != nullptr) {
+        $$->join_list.push_back(std::string($4));
+      } else $$->join_list.push_back(std::string(""));
+      std::reverse($$->join_list.begin(), $$->join_list.end());
+      free($3);
+
+      if($6 != nullptr) {
+        $$->on_conditions.swap(*$6);
+        delete $6;
+      }
+    }
+    ;
+
+on_attr:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | ON condition_list
+    {
+      $$ = $2;
+    }
+    ;
 order_by_stmt:
     /* empty */
     {
@@ -648,7 +729,6 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
-    
     ;
 
 
@@ -738,6 +818,7 @@ complex_expr:
       $$->need_extract = false;
       delete $1;
     }
+    ;
 
 possible_argument:
     /* empty */
@@ -790,6 +871,7 @@ alias_attr:
     | ID {
       $$ = $1;
     }
+    ;
 
 rel_list:
     /* empty */

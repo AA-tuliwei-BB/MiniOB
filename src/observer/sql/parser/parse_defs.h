@@ -230,6 +230,7 @@ enum CompOp
   NO_OP
 };
 
+
 /**
  * @brief 表示一个条件比较
  * @ingroup SQLParser
@@ -250,8 +251,14 @@ struct ConditionSqlNode
   ~ConditionSqlNode() = default;
 };
 
+struct JoinSqlNode{
+  std::vector<std::string> join_list;
+  std::vector<ConditionSqlNode*> on_conditions;
+};
+
 /**
- * 
+ * @brief select语句的order by子句
+ * @ingroup SQLParser
 */
 struct OrderBySqlNode
 {
@@ -278,6 +285,13 @@ struct SelectSqlNode
   std::vector<std::string>                        relations;      ///< 查询的表
   std::vector<ConditionSqlNode*>                  conditions;     ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<OrderBySqlNode>>    orders;         ///< 排序条件
+  JoinSqlNode*                                    joins;          ///< inner join语句
+  ~SelectSqlNode() {
+    for(auto &it : conditions){
+      delete it;
+    }
+    delete joins;
+  }
 };
 
 /**
@@ -367,10 +381,10 @@ struct DropTableSqlNode
  */
 struct CreateIndexSqlNode
 {
-  std::string index_name;      ///< Index name
-  std::string relation_name;   ///< Relation name
-  std::string attribute_name;  ///< Attribute name
-  bool        unique;          ///< 是否为unique索引
+  std::string index_name;                   ///< Index name
+  std::string relation_name;                ///< Relation name
+  std::vector<std::string> attribute_name;  ///< Attribute name
+  bool        unique;                       ///< 是否为unique索引
 };
 
 /**
