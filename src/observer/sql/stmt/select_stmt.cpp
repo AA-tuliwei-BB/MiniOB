@@ -150,7 +150,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
       return build_result.second;
     }
     if(build_result.first->type() == ExprType::FIELD){
-      FieldExpr* tmp = (FieldExpr*)&build_result.first;
+      FieldExpr* tmp = static_cast<FieldExpr*>(build_result.first.get());
       orders_fields.push_back(tmp->field());
       asc.push_back(cur->isAscending);
     } else {

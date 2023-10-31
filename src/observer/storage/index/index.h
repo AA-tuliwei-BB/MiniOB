@@ -83,7 +83,7 @@ public:
   virtual RC sync() = 0;
 
   virtual bool is_unique() { return unique_; }
-  virtual bool set_unique(bool b) { unique_ = b; }
+  virtual void set_unique(bool b) { unique_ = b; }
 
 protected:
   RC init(const IndexMeta &index_meta, const FieldMeta &field_meta);
