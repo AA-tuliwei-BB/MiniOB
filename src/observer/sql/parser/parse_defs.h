@@ -251,6 +251,17 @@ struct ConditionSqlNode
 };
 
 /**
+ * 
+*/
+struct OrderBySqlNode
+{
+  std::unique_ptr<ExprSqlNode> attrs;
+  bool isAscending;
+  OrderBySqlNode(ExprSqlNode* expr, bool asc):attrs(expr), isAscending(asc) {};
+  ~OrderBySqlNode() = default;
+};
+
+/**
  * @brief 描述一个select语句
  * @ingroup SQLParser
  * @details 一个正常的select语句描述起来比这个要复杂很多，这里做了简化。
@@ -263,9 +274,10 @@ struct ConditionSqlNode
 
 struct SelectSqlNode
 {
-  std::vector<std::unique_ptr<ExprSqlNode>>        expressions;    ///< expressions in select clause
-  std::vector<std::string>        relations;     ///< 查询的表
-  std::vector<ConditionSqlNode*>   conditions;    ///< 查询条件，使用AND串联起来多个条件
+  std::vector<std::unique_ptr<ExprSqlNode>>       expressions;    ///< expressions in select clause
+  std::vector<std::string>                        relations;      ///< 查询的表
+  std::vector<ConditionSqlNode*>                  conditions;     ///< 查询条件，使用AND串联起来多个条件
+  std::vector<std::unique_ptr<OrderBySqlNode>>    orders;         ///< 排序条件
 };
 
 /**

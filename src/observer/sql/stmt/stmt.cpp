@@ -339,12 +339,12 @@ std::vector<AggrFuncExpr*>* aggr_list){
     // }
     
     std::unique_ptr<ArithmeticExpr> result(new ArithmeticExpr(static_cast<ArithmeticExpr::Type>(cur.operation_type), std::move(left_parse.first), std::move(right_parse.first)));
-    // result->set_name(cur.name[0]);
+    result->set_name(cur.name);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   default:
     LOG_WARN("invalid expression type. type = %d.", static_cast<int>(father->get_type()));
     return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
-  break;
+    break;
   }
 }

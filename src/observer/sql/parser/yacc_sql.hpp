@@ -94,29 +94,31 @@ extern int yydebug;
     VALUES = 295,                  /* VALUES  */
     FROM = 296,                    /* FROM  */
     WHERE = 297,                   /* WHERE  */
-    AS = 298,                      /* AS  */
-    AND = 299,                     /* AND  */
-    NOT = 300,                     /* NOT  */
-    SET = 301,                     /* SET  */
-    ON = 302,                      /* ON  */
-    LOAD = 303,                    /* LOAD  */
-    DATA = 304,                    /* DATA  */
-    INFILE = 305,                  /* INFILE  */
-    EXPLAIN = 306,                 /* EXPLAIN  */
-    LK = 307,                      /* LK  */
-    EQ = 308,                      /* EQ  */
-    LT = 309,                      /* LT  */
-    GT = 310,                      /* GT  */
-    LE = 311,                      /* LE  */
-    GE = 312,                      /* GE  */
-    NE = 313,                      /* NE  */
-    IS_OP = 314,                   /* IS_OP  */
-    NUMBER = 315,                  /* NUMBER  */
-    DATE = 316,                    /* DATE  */
-    FLOAT = 317,                   /* FLOAT  */
-    ID = 318,                      /* ID  */
-    SSS = 319,                     /* SSS  */
-    UMINUS = 320                   /* UMINUS  */
+    ORDER_BY = 298,                /* ORDER_BY  */
+    ASC = 299,                     /* ASC  */
+    AS = 300,                      /* AS  */
+    AND = 301,                     /* AND  */
+    NOT = 302,                     /* NOT  */
+    SET = 303,                     /* SET  */
+    ON = 304,                      /* ON  */
+    LOAD = 305,                    /* LOAD  */
+    DATA = 306,                    /* DATA  */
+    INFILE = 307,                  /* INFILE  */
+    EXPLAIN = 308,                 /* EXPLAIN  */
+    LK = 309,                      /* LK  */
+    EQ = 310,                      /* EQ  */
+    LT = 311,                      /* LT  */
+    GT = 312,                      /* GT  */
+    LE = 313,                      /* LE  */
+    GE = 314,                      /* GE  */
+    NE = 315,                      /* NE  */
+    IS_OP = 316,                   /* IS_OP  */
+    NUMBER = 317,                  /* NUMBER  */
+    DATE = 318,                    /* DATE  */
+    FLOAT = 319,                   /* FLOAT  */
+    ID = 320,                      /* ID  */
+    SSS = 321,                     /* SSS  */
+    UMINUS = 322                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -125,7 +127,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 128 "yacc_sql.y"
+#line 130 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -141,11 +143,13 @@ union YYSTYPE
   std::vector<ConditionSqlNode*> *  condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
   std::vector<std::string> *        relation_list;
+  std::vector<std::unique_ptr<OrderBySqlNode>> * order_by_list;
   char *                            string;
   int                               number;
   float                             floats;
+  bool                              bools;
 
-#line 149 "yacc_sql.hpp"
+#line 153 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

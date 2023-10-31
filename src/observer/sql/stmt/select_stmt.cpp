@@ -46,8 +46,8 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
-  for (size_t i = 0; i < select_sql.relations.size(); i++) {
-    const char *table_name = select_sql.relations[i].c_str();
+  for (size_t i = 0; i < select_sql.relations.size() / 2; i++) {
+    const char *table_name = select_sql.relations[i * 2 + 1].c_str();
     if (nullptr == table_name) {
       LOG_WARN("invalid argument. relation name is null. index=%d", i);
       return RC::INVALID_ARGUMENT;
@@ -61,6 +61,14 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 
     tables.push_back(table);
     table_map.insert(std::pair<std::string, Table *>(table_name, table));
+    if(!select_sql.relations[i * 2].empty()) {
+      if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
+        table_map[select_sql.relations[i * 2]] = table;
+      } else {
+        LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
+        return RC::INVALID_ARGUMENT;
+      }
+    }
   }
 
   // collect query fields in `select` statement
@@ -131,6 +139,26 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     return rc;
   }
 
+  //create order-by statement
+  std::vector<Field> orders_fields;
+  std::vector<bool> asc;
+  for (auto &it : select_sql.orders) {
+    OrderBySqlNode *cur = it.get();
+    std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(cur->attrs.get(), tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
+    if(build_result.second != RC::SUCCESS){
+      LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+      return build_result.second;
+    }
+    if(build_result.first->type() == ExprType::FIELD){
+      FieldExpr* tmp = (FieldExpr*)&build_result.first;
+      orders_fields.push_back(tmp->field());
+      asc.push_back(cur->isAscending);
+    } else {
+      LOG_WARN("non-field type in order-by isn't supported now");
+      return RC::UNIMPLENMENT;
+    }
+  }
+
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->is_aggregate_ = is_aggregate;
@@ -139,9 +167,10 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_.swap(alias);
   select_stmt->aggr_list_.swap(aggr_list);
+  select_stmt->orders_fields_.swap(orders_fields);
+  select_stmt->asc_.swap(asc);
   select_stmt->filter_stmt_ = filter_stmt;
   
   stmt = select_stmt;
   return RC::SUCCESS;
 }
-

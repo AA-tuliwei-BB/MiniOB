@@ -105,6 +105,8 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         VALUES
         FROM
         WHERE
+        ORDER_BY
+        ASC
         AS
         AND
         NOT
@@ -140,9 +142,11 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
   std::vector<ConditionSqlNode*> *  condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
   std::vector<std::string> *        relation_list;
+  std::vector<std::unique_ptr<OrderBySqlNode>> * order_by_list;
   char *                            string;
   int                               number;
   float                             floats;
+  bool                              bools;
 }
 
 %token <number> NUMBER
@@ -167,6 +171,9 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <relation_list>       from
 %type <condition_list>      where
 %type <condition_list>      condition_list
+%type <order_by_list>       order_by_list
+%type <order_by_list>       order_by_stmt
+%type <bools>               order_type
 %type <complex_expr_list>   select_attr
 %type <relation_list>       rel_list
 %type <expression>          expression
@@ -499,7 +506,7 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr from where
+    SELECT select_attr from where order_by_stmt
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -516,6 +523,11 @@ select_stmt:        /*  select 语句的语法解析树*/
         $$->selection.conditions.swap(*$4);
         delete $4;
       }
+
+      if ($5 != nullptr){
+        $$->selection.orders.swap(*$5);
+        delete $5;
+      }
     }
     ;
 
@@ -524,16 +536,65 @@ from:
     {
       $$ = nullptr;
     }
-    |FROM ID rel_list
+    | FROM ID alias_attr rel_list
     {
       $$ = new std::vector<std::string>;
-      if ($3 != nullptr) {
-        $$->swap(*$3);
-        delete $3;
+      if ($4 != nullptr) {
+        $$->swap(*$4);
+        delete $4;
       }
       $$->push_back($2);
+      if($3 != nullptr) {
+        $$->push_back(std::string($3));
+      } else $$->push_back(std::string(""));
       std::reverse($$->begin(), $$->end());
       free($2);
+    }
+    ;
+
+order_by_stmt:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | ORDER_BY complex_expr order_type order_by_list
+    {
+      if($4 != nullptr){
+        $$ = $4;
+      } else $$ = new std::vector<std::unique_ptr<OrderBySqlNode>>;
+
+      $$->push_back(std::unique_ptr<OrderBySqlNode>(new OrderBySqlNode($2, $3)));
+      std::reverse($$->begin(), $$->end());
+    }
+    ;
+
+order_type:
+    /* empty */
+    {
+      $$ = true;
+    }
+    | ASC
+    {
+      $$ = true;
+    }
+    | DESC
+    {
+      $$ = false;
+    }
+    ;
+
+order_by_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | COMMA complex_expr order_type order_by_list
+    {
+    if ($4 != nullptr) {
+      $$ = $4;
+    } else $$ = new std::vector<std::unique_ptr<OrderBySqlNode>>;
+
+      $$->push_back(std::unique_ptr<OrderBySqlNode>(new OrderBySqlNode($2, $3)));
     }
     ;
 calc_stmt:
@@ -735,14 +796,17 @@ rel_list:
     {
       $$ = nullptr;
     }
-    | COMMA ID rel_list {
-      if ($3 != nullptr) {
-        $$ = $3;
+    | COMMA ID alias_attr rel_list {
+      if ($4 != nullptr) {
+        $$ = $4;
       } else {
         $$ = new std::vector<std::string>;
       }
-
       $$->push_back($2);
+      if($3 != nullptr) {
+        $$->push_back(std::string($3));
+      } else $$->push_back(std::string(""));
+
       free($2);
     }
     ;
@@ -752,7 +816,7 @@ where:
       $$ = nullptr;
     }
     | WHERE condition_list {
-      $$ = $2;  
+      $$ = $2; 
     }
     ;
 condition_list:
