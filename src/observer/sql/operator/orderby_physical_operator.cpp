@@ -100,9 +100,9 @@ RC OrderbyPhysicalOperator::next()
         if (a[i].attr_type() == NULLS || b[i].attr_type() == NULLS) {
           if (a[i].attr_type() != b[i].attr_type()) {
             if (a[i].attr_type() == NULLS) {
-              return true;
+              return bool(asc[i]);
             } else {
-              return false;
+              return !bool(asc[i]);
             }
           }
         }
