@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/operator/join_physical_operator.h"
+#include "join_physical_operator.h"
 
 NestedLoopJoinPhysicalOperator::NestedLoopJoinPhysicalOperator()
 {}
@@ -29,6 +30,17 @@ RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
   right_ = children_[1].get();
   right_closed_ = true;
   round_done_ = true;
+
+  if (!bufferred) {
+    left_->open(trx);
+    right_->open(trx);
+    get_buffer();
+    left_position  = 0;
+    right_position = 0;
+    left_->close();
+    right_->close();
+    bufferred = true;
+  }
 
   rc = left_->open(trx);
   trx_ = trx;
@@ -88,8 +100,44 @@ Tuple *NestedLoopJoinPhysicalOperator::current_tuple()
   return &joined_tuple_;
 }
 
+RC NestedLoopJoinPhysicalOperator::get_buffer()
+{
+  if (left_->type() != PhysicalOperatorType::NESTED_LOOP_JOIN) {
+    left_bufferred = true;
+    RC rc = RC::SUCCESS;
+    while ((rc = left_->next()) == RC::SUCCESS) {
+      left_buffer.push_back(new RowTuple(*static_cast<RowTuple *>(left_->current_tuple())));
+    }
+    if (rc != RC::RECORD_EOF) {
+      return rc;
+    }
+  }
+
+  if (right_->type() != PhysicalOperatorType::NESTED_LOOP_JOIN) {
+    right_bufferred = true;
+    RC rc = RC::SUCCESS;
+    while ((rc = right_->next()) == RC::SUCCESS) {
+      right_buffer.push_back(new RowTuple(*static_cast<RowTuple *>(right_->current_tuple())));
+    }
+    if (rc != RC::RECORD_EOF) {
+      return rc;
+    }
+  }
+  return RC::SUCCESS;
+}
+
 RC NestedLoopJoinPhysicalOperator::left_next()
 {
+  if (left_bufferred) {
+    if (left_position == left_buffer.size()) {
+      return RC::RECORD_EOF;
+    }
+    left_tuple_ = left_buffer[left_position];
+    joined_tuple_.set_left(left_tuple_);
+    left_position++;
+    return RC::SUCCESS;
+  }
+
   RC rc = RC::SUCCESS;
   rc = left_->next();
   if (rc != RC::SUCCESS) {
@@ -104,6 +152,21 @@ RC NestedLoopJoinPhysicalOperator::left_next()
 RC NestedLoopJoinPhysicalOperator::right_next()
 {
   RC rc = RC::SUCCESS;
+  if (right_bufferred) {
+    if (round_done_) {
+      right_position = 0;
+      round_done_ = false;
+    }
+    if (right_position == right_buffer.size()) {
+      round_done_ = true;
+      return RC::RECORD_EOF;
+    }
+    right_tuple_ = right_buffer[right_position];
+    joined_tuple_.set_right(right_tuple_);
+    right_position++;
+    return RC::SUCCESS;
+  }
+
   if (round_done_) {
     if (!right_closed_) {
       rc = right_->close();

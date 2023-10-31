@@ -29,4 +29,5 @@ private:
   std::vector<bool> asc_; // 是否升序
   SpecValueListTuple tuple_;
   int current_row_;
+  bool emitted_ = false;
 };

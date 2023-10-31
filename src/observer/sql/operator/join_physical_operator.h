@@ -26,7 +26,14 @@ class NestedLoopJoinPhysicalOperator : public PhysicalOperator
 {
 public:
   NestedLoopJoinPhysicalOperator();
-  virtual ~NestedLoopJoinPhysicalOperator() = default;
+  virtual ~NestedLoopJoinPhysicalOperator() {
+    for (auto &tuple : left_buffer) {
+      delete tuple;
+    }
+    for (auto &tuple : right_buffer) {
+      delete tuple;
+    }
+  }
 
   PhysicalOperatorType type() const override
   {
@@ -37,6 +44,8 @@ public:
   RC next() override;
   RC close() override;
   Tuple *current_tuple() override;
+
+  RC get_buffer();
 
 private:
   RC left_next();   //! 左表遍历下一条数据
@@ -53,4 +62,12 @@ private:
   JoinedTuple joined_tuple_;  //! 当前关联的左右两个tuple
   bool round_done_ = true;    //! 右表遍历的一轮是否结束
   bool right_closed_ = true;  //! 右表算子是否已经关闭
+
+  bool bufferred = false;
+  bool left_bufferred = false;
+  bool right_bufferred = false;
+  std::vector<RowTuple *> left_buffer;
+  std::vector<RowTuple *> right_buffer;
+  int left_position;
+  int right_position;
 };
