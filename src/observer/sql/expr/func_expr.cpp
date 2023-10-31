@@ -81,6 +81,9 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     while ((found_place = formatted.find("%Y")) != std::string::npos) {
       formatted.replace(found_place, 2, year);
     }
+    while ((found_place = formatted.find("%y")) != std::string::npos) {
+      formatted.replace(found_place, 2, year);
+    }
     while ((found_place = formatted.find("%m")) != std::string::npos) {
       formatted.replace(found_place, 2, month);
     }
