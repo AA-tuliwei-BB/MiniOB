@@ -75,6 +75,7 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     int         date = son_value.get_int();
     std::string formatted(format_string_);
     std::string year(std::to_string(date / 10000));
+    std::string little_year(std::to_string(date / 10000 % 100));
     std::string month(std::to_string(date / 100 % 100));
     std::string day(std::to_string(date % 100));
     size_t found_place;
@@ -82,7 +83,7 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
       formatted.replace(found_place, 2, year);
     }
     while ((found_place = formatted.find("%y")) != std::string::npos) {
-      formatted.replace(found_place, 2, year);
+      formatted.replace(found_place, 2, little_year);
     }
     while ((found_place = formatted.find("%m")) != std::string::npos) {
       formatted.replace(found_place, 2, month);
