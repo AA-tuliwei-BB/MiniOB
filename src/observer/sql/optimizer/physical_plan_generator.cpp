@@ -95,6 +95,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
       return create_plan(static_cast<ExpressionLogicalOperator &>(logical_operator), oper);
     } break;
 
+    case LogicalOperatorType::ORDERBY: {
+      return create_plan(static_cast<OrderbyLogicalOperator &>(logical_operator), oper);
+    } break;
+
     default: {
       return RC::INVALID_ARGUMENT;
     }
