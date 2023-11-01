@@ -102,7 +102,7 @@ Tuple *NestedLoopJoinPhysicalOperator::current_tuple()
 
 RC NestedLoopJoinPhysicalOperator::get_buffer()
 {
-  if (left_->type() != PhysicalOperatorType::NESTED_LOOP_JOIN) {
+  if (left_->type() == PhysicalOperatorType::TABLE_SCAN || left_->type() == PhysicalOperatorType::INDEX_SCAN) {
     left_bufferred = true;
     RC rc = RC::SUCCESS;
     while ((rc = left_->next()) == RC::SUCCESS) {

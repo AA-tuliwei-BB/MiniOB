@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/rc.h"
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
+#include "sql/stmt/join_stmt.h"
 
 
 class FieldMeta;
@@ -66,6 +67,9 @@ public:
   {
     return expressions_;
   }
+  std::vector<std::unique_ptr<JoinStmt>> &joins(){
+    return joins_;
+  }
   FilterStmt *filter_stmt() const
   {
     return filter_stmt_;
@@ -92,8 +96,7 @@ private:
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
-  std::vector<Table *> join_tables_;
-  std::vector<Field> join_fields_;
+  std::vector<std::unique_ptr<JoinStmt>> joins_;
   std::vector<Field> orders_fields_;
   std::vector<bool> asc_; // 是否升序
   std::unique_ptr<SelectStmt> sub_query;

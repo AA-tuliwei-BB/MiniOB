@@ -141,7 +141,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
   Expression *                      expression;
   std::vector<Expression *> *       expression_list;
   ExprSqlNode *                     complex_expr;
-  JoinSqlNode *                     join_attr;
+  std::vector<std::unique_ptr<JoinSqlNode>> *  join_attr;
   std::vector<std::unique_ptr<ExprSqlNode>> *  complex_expr_list;
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode*> *  condition_list;
@@ -561,10 +561,15 @@ select_stmt:        /*  select 语句的语法解析树*/
       
       if ($3 != nullptr) {
         $$->selection.relations.swap(*$3);
+        std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
         delete $3;
       }
       
-      $$->selection.joins = $4;
+      if ($4 != nullptr) {
+        $$->selection.joins.swap(*$4);
+        std:reverse($$->selection.joins.begin(), $$->selection.joins.end());
+        delete $4;
+      }
       
       if ($5 != nullptr) {
         $$->selection.conditions.swap(*$5);
@@ -594,7 +599,6 @@ from:
       if($3 != nullptr) {
         $$->push_back(std::string($3));
       } else $$->push_back(std::string(""));
-      std::reverse($$->begin(), $$->end());
       free($2);
     }
     ;
@@ -604,24 +608,28 @@ join_attr:
     {
       $$ = nullptr;
     }
-    | INNER JOIN ID alias_attr rel_list on_attr
+    | INNER JOIN ID alias_attr rel_list on_attr join_attr
     {
-      $$ = new JoinSqlNode;
+      if($7 != nullptr){
+        $$ = $7;
+      } else $$ = new std::vector<std::unique_ptr<JoinSqlNode>>;
+      std::unique_ptr<JoinSqlNode> tmp(new JoinSqlNode);
       if ($5 != nullptr) {
-        $$->join_list.swap(*$5);
+        tmp->join_list.swap(*$5);
         delete $5;
       }
-      $$->join_list.push_back($3);
+      tmp->join_list.push_back(std::string($3));
       if($4 != nullptr) {
-        $$->join_list.push_back(std::string($4));
-      } else $$->join_list.push_back(std::string(""));
-      std::reverse($$->join_list.begin(), $$->join_list.end());
+        tmp->join_list.push_back(std::string($4));
+        free($4);
+      } else tmp->join_list.push_back(std::string(""));
       free($3);
 
       if($6 != nullptr) {
-        $$->on_conditions.swap(*$6);
+        tmp->on_conditions.swap(*$6);
         delete $6;
       }
+      $$->push_back(std::move(tmp));
     }
     ;
 

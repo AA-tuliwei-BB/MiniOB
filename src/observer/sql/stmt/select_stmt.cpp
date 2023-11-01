@@ -46,6 +46,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
+  RC rc = RC::SUCCESS;
   for (size_t i = 0; i < select_sql.relations.size() / 2; i++) {
     const char *table_name = select_sql.relations[i * 2 + 1].c_str();
     if (nullptr == table_name) {
@@ -69,6 +70,15 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
         return RC::INVALID_ARGUMENT;
       }
     }
+  }
+  std::vector<std::unique_ptr<JoinStmt>> joins;
+  for(auto &it : select_sql.joins){
+    JoinStmt* tmp;
+    if((rc = JoinStmt::create(db, *it, tables, table_map, tmp)) != RC::SUCCESS){
+      LOG_WARN("fail to create join stmt");
+      return rc;
+    }
+    joins.push_back(std::unique_ptr<JoinStmt>(tmp));
   }
 
   // collect query fields in `select` statement
@@ -128,7 +138,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
-  RC rc = FilterStmt::create(db,
+  rc = FilterStmt::create(db,
       default_table,
       &table_map,
       select_sql.conditions,
@@ -167,6 +177,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_.swap(alias);
   select_stmt->aggr_list_.swap(aggr_list);
+  select_stmt->joins_.swap(joins);
   select_stmt->orders_fields_.swap(orders_fields);
   select_stmt->asc_.swap(asc);
   select_stmt->filter_stmt_ = filter_stmt;

@@ -289,7 +289,7 @@ struct SelectSqlNode
   std::vector<std::string>                        relations;      ///< 查询的表
   std::vector<ConditionSqlNode*>                  conditions;     ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<OrderBySqlNode>>    orders;         ///< 排序条件
-  JoinSqlNode*                                    joins;          ///< inner join语句
+  std::vector<std::unique_ptr<JoinSqlNode>>       joins;          ///< inner join语句
   // ~SelectSqlNode() {
   //   for(auto &it : conditions){
   //     delete it;

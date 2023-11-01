@@ -15,8 +15,10 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "common/rc.h"
+#include "storage/field/field.h"
 
 class Stmt;
 class CalcStmt;
@@ -26,6 +28,7 @@ class InsertStmt;
 class DeleteStmt;
 class ExplainStmt;
 class UpdateStmt;
+class JoinStmt;
 class LogicalOperator;
 
 class LogicalPlanGenerator
@@ -44,4 +47,6 @@ private:
   RC create_plan(DeleteStmt *delete_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
   RC create_plan(ExplainStmt *explain_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
   RC create_plan(UpdateStmt *update_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
+  RC create_plan(
+    JoinStmt *join_stmt, const std::vector<Field> &all_fields, std::unique_ptr<LogicalOperator> &logical_operator);
 };

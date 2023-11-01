@@ -87,6 +87,47 @@ RC LogicalPlanGenerator::create_plan(CalcStmt *calc_stmt, std::unique_ptr<Logica
 }
 
 RC LogicalPlanGenerator::create_plan(
+    JoinStmt *join_stmt, const std::vector<Field> &all_fields, std::unique_ptr<LogicalOperator> &logical_operator)
+{
+
+  const std::vector<Table *> &tables = join_stmt->tables;
+  for (Table *table : tables) {
+    std::vector<Field> fields;
+    for (const Field &field : all_fields) {
+      if (0 == strcmp(field.table_name(), table->name())) {
+        fields.push_back(field);
+      }
+    }
+
+    unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, fields, true/*readonly*/));
+    if (logical_operator == nullptr) {
+      logical_operator = std::move(table_get_oper);
+    } else {
+      JoinLogicalOperator *join_oper = new JoinLogicalOperator;
+      join_oper->add_child(std::move(logical_operator));
+      join_oper->add_child(std::move(table_get_oper));
+      logical_operator = unique_ptr<LogicalOperator>(join_oper);
+    }
+  }
+
+  unique_ptr<LogicalOperator> predicate_oper;
+  RC rc = create_plan(join_stmt->filter_stmt.get(), predicate_oper);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
+    return rc;
+  }
+  if (predicate_oper) {
+    if (logical_operator) {
+      predicate_oper->add_child(std::move(logical_operator));
+      logical_operator = std::move(predicate_oper);
+    }
+  }
+
+  
+  return RC::SUCCESS;
+}
+
+RC LogicalPlanGenerator::create_plan(
     SelectStmt *select_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
   unique_ptr<LogicalOperator> table_oper(nullptr);
@@ -109,6 +150,17 @@ RC LogicalPlanGenerator::create_plan(
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
+    }
+  }
+
+  std::vector<std::unique_ptr<JoinStmt>> &joins = select_stmt->joins();
+  if(!joins.empty()){
+    for(auto &it : joins){
+      RC rc = create_plan(it.get(), all_fields, table_oper);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to create join logical plan. rc=%s", strrc(rc));
+        return rc;
+      }
     }
   }
 
@@ -147,7 +199,7 @@ RC LogicalPlanGenerator::create_plan(
     } else {
       if (table_oper) {
         orderby_oper->add_child(std::move(table_oper));
-      }
+      } 
     }
     root_oper->add_child(std::move(orderby_oper));
   } else {
