@@ -29,6 +29,9 @@ class PredicatePhysicalOperator : public PhysicalOperator
 public:
   PredicatePhysicalOperator(std::unique_ptr<Expression> expr);
 
+  PredicatePhysicalOperator(std::unique_ptr<Expression> expr, std::vector<FieldExpr> sub_query_fields,
+      std::vector<CompOp> sub_query_opts, bool connector);
+
   virtual ~PredicatePhysicalOperator() = default;
 
   PhysicalOperatorType type() const override
@@ -43,5 +46,13 @@ public:
   Tuple *current_tuple() override;
 
 private:
+  RC execute_sub_query(FieldExpr &left, CompOp &op, PhysicalOperator *right, Tuple *tuple, bool &result);
+
+private:
   std::unique_ptr<Expression> expression_;
+  std::vector<FieldExpr> sub_query_fields_;
+  std::vector<CompOp> sub_query_opts_;
+  // false->and, true -> or;
+  bool sub_query_connector_ = true; // And / Or
+  Trx *trx_ = nullptr;
 };

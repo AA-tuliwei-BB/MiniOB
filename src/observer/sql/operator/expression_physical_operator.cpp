@@ -30,6 +30,10 @@ RC ExpressionPhysicalOperator::open(Trx *trx)
     return rc;
   }
 
+  if (parent_tuple_ != nullptr) {
+    child->set_parent_tuple(get_parent_tuple());
+  }
+
   return RC::SUCCESS;
 }
 

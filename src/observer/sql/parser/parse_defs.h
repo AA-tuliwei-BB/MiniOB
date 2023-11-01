@@ -227,7 +227,11 @@ enum CompOp
   NOT_LIKE,     ///< NOT_LIKE
   IS,           ///< IS
   IS_NOT,       ///< IS_NOT
-  NO_OP
+  IN,
+  NOT_IN,
+  EXIST,
+  NOT_EXIST,
+  NO_OP,
 };
 
 

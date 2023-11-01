@@ -87,6 +87,17 @@ public:
     return children_;
   }
 
+  void set_parent_tuple(Tuple *tuple)
+  {
+    parent_tuple_ = tuple;
+  }
+
+  Tuple *get_parent_tuple()
+  {
+    return parent_tuple_;
+  }
+
 protected:
   std::vector<std::unique_ptr<PhysicalOperator>> children_;
+  Tuple *parent_tuple_= nullptr;
 };

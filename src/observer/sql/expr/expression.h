@@ -268,6 +268,8 @@ public:
    */
   RC compare_value(const Value &left, const Value &right, bool &value) const;
 
+  static RC compare_value_static(const Value &left, const Value &right, const CompOp& comp, bool &value);
+
 private:
   CompOp comp_;
   std::unique_ptr<Expression> left_;

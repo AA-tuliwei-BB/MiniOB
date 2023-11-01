@@ -177,24 +177,36 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
 RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, unique_ptr<PhysicalOperator> &oper)
 {
   vector<unique_ptr<LogicalOperator>> &children_opers = pred_oper.children();
-  ASSERT(children_opers.size() == 1, "predicate logical operator's sub oper number should be 1");
+  ASSERT(children_opers.size() >= 1, "predicate logical operator's sub oper number should be more than 1");
 
-  LogicalOperator &child_oper = *children_opers.front();
-
-  unique_ptr<PhysicalOperator> child_phy_oper;
-  RC rc = create(child_oper, child_phy_oper);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to create child operator of predicate operator. rc=%s", strrc(rc));
-    return rc;
+  std::vector<unique_ptr<PhysicalOperator>> child_phy_opers;
+  for (auto &it : children_opers) {
+    LogicalOperator *child_oper = it.get();
+    unique_ptr<PhysicalOperator> child_phy_oper;
+    RC rc = create(*child_oper, child_phy_oper);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create child operator of predicate operator. rc=%s", strrc(rc));
+      return rc;
+    }
+    child_phy_opers.emplace_back(std::move(child_phy_oper));
   }
 
   vector<unique_ptr<Expression>> &expressions = pred_oper.expressions();
   ASSERT(expressions.size() == 1, "predicate logical operator's children should be 1");
 
   unique_ptr<Expression> expression = std::move(expressions.front());
-  oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
-  oper->add_child(std::move(child_phy_oper));
-  return rc;
+  if (pred_oper.has_sub_query()) {
+    oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression),
+        pred_oper.sub_query_fields(),
+        pred_oper.sub_query_opts(),
+        pred_oper.sub_query_connector()));
+  } else {
+    oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
+  }
+  for (auto &child_phy_oper : child_phy_opers) {
+    oper->add_child(std::move(child_phy_oper));
+  }
+  return RC::SUCCESS;
 }
 
 RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, unique_ptr<PhysicalOperator> &oper)
@@ -267,8 +279,9 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, unique
   std::vector<unique_ptr<PhysicalOperator>> child_physical_opers;
 
   RC rc = RC::SUCCESS;
-  if (!child_opers.empty()) {
-    LogicalOperator *child_oper = child_opers.front().get();
+  for (auto &child_oper_it : child_opers) {
+    LogicalOperator *child_oper = child_oper_it.get();
+
     rc = create(*child_oper, child_physical_oper);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to create physical operator. rc=%s", strrc(rc));

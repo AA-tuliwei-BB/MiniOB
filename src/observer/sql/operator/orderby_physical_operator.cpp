@@ -17,6 +17,10 @@ RC OrderbyPhysicalOperator::open(Trx *trx)
     return rc;
   }
 
+  if (parent_tuple_ != nullptr) {
+    children_[0]->set_parent_tuple(get_parent_tuple());
+  }
+
   return RC::SUCCESS;
 }
 

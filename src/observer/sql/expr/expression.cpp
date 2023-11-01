@@ -91,16 +91,21 @@ ComparisonExpr::~ComparisonExpr()
 
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
+  return compare_value_static(left, right, comp_, result);
+}
+
+RC ComparisonExpr::compare_value_static(const Value &left, const Value &right, const CompOp &comp, bool &result)
+{
   RC rc = RC::SUCCESS;
-  if(comp_ == LIKE || comp_ == NOT_LIKE){
+  if(comp == LIKE || comp == NOT_LIKE){
     result = common::like_match(left.get_string(), right.get_string());
-    if(comp_ == NOT_LIKE) result = !result;
+    if(comp == NOT_LIKE) result = !result;
     return rc;
   }
   result = false;
-  if(comp_ != IS && comp_ != IS_NOT && (left.is_null() || right.is_null())) return rc;
+  if(comp != IS && comp != IS_NOT && (left.is_null() || right.is_null())) return rc;
   int cmp_result = left.compare(right);
-  switch (comp_) {
+  switch (comp) {
     case EQUAL_TO: {
       result = (0 == cmp_result);
     } break;
@@ -126,7 +131,7 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
       result = cmp_result != 0 || (left.is_null() ^ right.is_null()); 
     } break;
     default: {
-      LOG_WARN("unsupported comparison. %d", comp_);
+      LOG_WARN("unsupported comparison. %d", comp);
       rc = RC::INTERNAL;
     } break;
   }
