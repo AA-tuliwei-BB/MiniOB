@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 class Table;
 class FieldMeta;
 class FilterStmt;
+class SelectStmt;
 
 /**
  * @brief 更新语句
