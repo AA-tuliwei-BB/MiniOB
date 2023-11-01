@@ -234,7 +234,7 @@ enum CompOp
   NO_OP,
 };
 
-
+class ParsedSqlNode;
 /**
  * @brief 表示一个条件比较
  * @ingroup SQLParser
