@@ -97,9 +97,9 @@ RC FuncExpr::calc_value(const Value &son_value, Value &value) const
     }
     if ((Day.size() == 1 && Day[0] == '1') || (Day.size() == 2 && Day[1] == '1' && Day[0] != '1')) {
       Day = Day + "st";
-    } else if ((Day.size() == 1 && Day[0] == '2') || (Day.size() == 2 && Day[1] == '2')) {
+    } else if ((Day.size() == 1 && Day[0] == '2') || (Day.size() == 2 && Day[1] == '2' && Day[0] != '1')) {
       Day = Day + "nd";
-    } else if ((Day.size() == 1 && Day[0] == '3') || (Day.size() == 2 && Day[1] == '3')) {
+    } else if ((Day.size() == 1 && Day[0] == '3') || (Day.size() == 2 && Day[1] == '3' && Day[0] != '1')) {
       Day = Day + "rd";
     } else {
       Day = Day + "th";
