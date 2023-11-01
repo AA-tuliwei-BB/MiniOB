@@ -72,6 +72,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     }
   }
   std::vector<std::unique_ptr<JoinStmt>> joins;
+  int from_size = tables.size();
   for(auto &it : select_sql.joins){
     JoinStmt* tmp;
     if((rc = JoinStmt::create(db, *it, tables, table_map, tmp)) != RC::SUCCESS){
@@ -178,6 +179,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->alias_.swap(alias);
   select_stmt->aggr_list_.swap(aggr_list);
   select_stmt->joins_.swap(joins);
+  select_stmt->table_size_in_from = from_size;
   select_stmt->orders_fields_.swap(orders_fields);
   select_stmt->asc_.swap(asc);
   select_stmt->filter_stmt_ = filter_stmt;

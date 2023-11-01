@@ -134,7 +134,9 @@ RC LogicalPlanGenerator::create_plan(
 
   const std::vector<Table *> &tables = select_stmt->tables();
   const std::vector<Field> &all_fields = select_stmt->query_fields();
-  for (Table *table : tables) {
+  for (int i = 0; i < select_stmt->from_size(); ++i) 
+  {
+    Table* const& table = tables[i];
     std::vector<Field> fields;
     for (const Field &field : all_fields) {
       if (0 == strcmp(field.table_name(), table->name())) {

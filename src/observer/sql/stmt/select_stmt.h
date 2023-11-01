@@ -67,6 +67,9 @@ public:
   {
     return expressions_;
   }
+  int from_size() const {
+    return table_size_in_from;
+  }
   std::vector<std::unique_ptr<JoinStmt>> &joins(){
     return joins_;
   }
@@ -93,6 +96,7 @@ private:
   std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
+  int table_size_in_from;
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
