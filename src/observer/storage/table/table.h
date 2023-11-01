@@ -83,6 +83,9 @@ public:
   RC visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor);
   RC get_record(const RID &rid, Record &record);
 
+  RC delete_from_index(const Record &record);
+  RC insert_into_index(const Record &record);
+
   RC recover_insert_record(Record &record);
 
   // TODO refactor

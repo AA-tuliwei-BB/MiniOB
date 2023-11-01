@@ -28,6 +28,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/index/index.h"
 #include "storage/index/bplus_tree_index.h"
 #include "storage/trx/trx.h"
+#include "table.h"
 
 Table::~Table()
 {
@@ -387,6 +388,17 @@ RC Table::get_record(const RID &rid, Record &record)
 
   record.set_data_owner(record_data, record_size);
   return rc;
+}
+
+RC Table::delete_from_index(const Record &record)
+{
+  bool tmp;
+  return delete_entry_of_indexes(record, record.rid(), tmp);
+}
+
+RC Table::insert_into_index(const Record &record)
+{
+  return insert_entry_of_indexes(record, record.rid());
 }
 
 // 封存，暂不使用

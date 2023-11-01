@@ -181,6 +181,7 @@ RC MvccTrx::delete_record(Table * table, Record &record)
       trx_id_, table->table_id(), record.rid().to_string().c_str(), record.len(), strrc(rc));
 
   operations_.insert(Operation(Operation::Type::DELETE, table, record.rid()));
+  table->delete_from_index(record);
 
   return RC::SUCCESS;
 }
@@ -414,6 +415,15 @@ RC MvccTrx::rollback()
         rc = table->visit_record(rid, false/*readonly*/, record_updater);
         ASSERT(rc == RC::SUCCESS, "failed to get record while committing. rid=%s, rc=%s",
                rid.to_string().c_str(), strrc(rc));
+        Record record;
+        rc = table->get_record(rid, record);
+        if (rc != RC::SUCCESS) {
+          return rc;
+        }
+        rc = table->insert_into_index(record);
+        if (rc != RC::SUCCESS) {
+          return rc;
+        }
       } break;
 
       default: {
