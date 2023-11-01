@@ -265,6 +265,16 @@ RC LogicalPlanGenerator::create_plan(
     update_oper->add_child(std::move(table_get_oper));
   }
 
+  // add sub-select
+  for (SelectStmt *sub_stmt : *update_stmt->sub_select()) {
+    unique_ptr<LogicalOperator> sub_select_oper;
+    RC rc = create_plan(sub_stmt, sub_select_oper);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+    update_oper->add_child(std::move(sub_select_oper));
+  }
+
   logical_operator = std::move(update_oper);
   return rc;
 }

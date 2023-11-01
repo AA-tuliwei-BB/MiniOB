@@ -89,6 +89,14 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
     return rc;
   }
 
-  stmt = new UpdateStmt(table, fields, values, value_num, filter_stmt);
+  std::vector<SelectStmt *> *sub_select_stmts;
+  sub_select_stmts = new std::vector<SelectStmt *>;
+  for (auto &sub_sql_node : update.sub_select) {
+    Stmt *sub_select_stmt = nullptr;
+    RC rc = SelectStmt::create(db, *sub_sql_node, sub_select_stmt);
+    sub_select_stmts->push_back(static_cast<SelectStmt *>(sub_select_stmt));
+  }
+
+  stmt = new UpdateStmt(table, fields, values, value_num, filter_stmt, sub_select_stmts);
   return RC::SUCCESS;
 }

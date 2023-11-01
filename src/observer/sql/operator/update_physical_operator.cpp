@@ -14,6 +14,38 @@ RC UpdatePhysicalOperator::open(Trx *trx)
     return rc;
   }
 
+  // get value of sub select
+  int current_sub_select = 1;
+  for (Value &value : values_) {
+    if (value.attr_type() == UNDEFINED) {
+      if (current_sub_select >= children_.size()) {
+        LOG_ERROR("Update: Value undefined but can't get a sub select!");
+        return RC::INTERNAL;
+      }
+      std::unique_ptr<PhysicalOperator> &sub_select = children_[current_sub_select++];
+      RC rc = sub_select->open(trx);
+      if (rc != RC::SUCCESS) {
+        LOG_ERROR("Update: failed to open sub select!");
+        return rc;
+      }
+      rc = sub_select->next();
+      if (rc != RC::SUCCESS) {
+        LOG_ERROR("Update: failed to get next of sub select!");
+        return rc;
+      }
+      rc = sub_select->current_tuple()->cell_at(0, value);
+      if (rc != RC::SUCCESS) {
+        LOG_ERROR("Update: failed to get cell of sub select!");
+        return rc;
+      }
+      rc = sub_select->close();
+      if (rc != RC::SUCCESS) {
+        LOG_ERROR("Update: failed to close sub select!");
+        return rc;
+      }
+    }
+  }
+
   trx_ = trx;
 
   return RC::SUCCESS;

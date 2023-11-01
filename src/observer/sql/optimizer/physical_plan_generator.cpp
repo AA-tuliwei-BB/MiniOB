@@ -264,6 +264,7 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, unique
   vector<unique_ptr<LogicalOperator>> &child_opers = update_oper.children();
 
   unique_ptr<PhysicalOperator> child_physical_oper;
+  std::vector<unique_ptr<PhysicalOperator>> child_physical_opers;
 
   RC rc = RC::SUCCESS;
   if (!child_opers.empty()) {
@@ -273,6 +274,9 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, unique
       LOG_WARN("failed to create physical operator. rc=%s", strrc(rc));
       return rc;
     }
+    if (child_physical_oper) {
+      child_physical_opers.emplace_back(std::move(child_physical_oper));
+    }
   }
 
   std::vector<std::string> &fields = update_oper.fields();
@@ -281,8 +285,8 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, unique
   oper = unique_ptr<PhysicalOperator>(
       new UpdatePhysicalOperator(update_oper.table(), std::move(fields), std::move(values)));
 
-  if (child_physical_oper) {
-    oper->add_child(std::move(child_physical_oper));
+  for (auto &child_oper : child_physical_opers) {
+    oper->add_child(std::move(child_oper));
   }
   return rc;
 }
