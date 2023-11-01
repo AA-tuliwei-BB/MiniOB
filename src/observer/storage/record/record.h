@@ -47,6 +47,14 @@ struct RID
     return ss.str();
   }
 
+  bool operator<(const RID &other) const {
+    if (page_num == other.page_num) {
+      return offset < other.offset;
+    } else {
+      return page_num < other.page_num;
+    }
+  }
+
   bool operator==(const RID &other) const { return page_num == other.page_num && offset == other.offset; }
 
   bool operator!=(const RID &other) const { return !(*this == other); }

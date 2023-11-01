@@ -35,5 +35,6 @@ private:
   Table *table_ = nullptr;
   std::vector<std::string> fields_;
   std::vector<Value> values_;
+  std::map<RID, bool> visited;
   Trx *trx_ = nullptr;
 };

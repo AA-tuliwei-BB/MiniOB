@@ -255,7 +255,7 @@ RC Table::insert_record(Record &record)
   return rc;
 }
 
-RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::vector<Value>&values)
+RC Table::update_record(RID &rid, std::vector<std::string> &fields, std::vector<Value>&values)
 {
   // 删除原索引，修改，创建新索引
   Record before;
@@ -349,8 +349,13 @@ RC Table::update_record(const RID &rid, std::vector<std::string> &fields, std::v
       LOG_ERROR("Fail to make record when update");
       return rc;
     }
+    // 复制sys_field
+    for (int i = 0; i < table_meta_.sys_field_num(); ++i) {
+      memcpy(after.data() + after.offset()[i], before.data() + before.offset()[i], table_meta_.field(i)->len());
+    }
+    
     record_handler_->delete_record(&rid);
-    record_handler_->insert_record(after, &after.rid());
+    record_handler_->insert_record(after, &rid);
   }
   return RC::SUCCESS;
 }
@@ -428,8 +433,11 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     return RC::SCHEMA_FIELD_MISSING;
   }
 
-  record.null().resize(value_num);
+  record.null().resize(table_meta_.field_num());
   const int normal_field_start_index = table_meta_.sys_field_num();
+  for (int i = 0; i < normal_field_start_index; ++i) {
+    record.null()[i] = false;
+  }
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
@@ -443,18 +451,22 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
                 table_meta_.name(), field->name());
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
-    record.null()[i] = value.is_null();
+    record.null()[i + normal_field_start_index] = value.is_null();
   }
 
   // 计算总长度，分配内存
-  record.offset().resize(value_num + 1);
+  record.offset().resize(table_meta_.field_num() + 1);
   int record_size = 0;
-  for (int i = 0; i < value_num; i++) {
+  for (int i = 0; i < table_meta_.sys_field_num(); ++i) {
     record.offset()[i] = record_size;
+    record_size += table_meta_.field(i)->len();
+  }
+  for (int i = 0; i < value_num; i++) {
+    record.offset()[i + normal_field_start_index] = record_size;
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     record_size += field->len() != 0 ? field->len() : values[i].length();
   }
-  record.offset()[value_num] = record_size;
+  record.offset()[table_meta_.field_num()] = record_size;
 
   char *record_data = (char *)malloc(record_size);
 
@@ -463,7 +475,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
     size_t copy_len = field->len() != 0 ? field->len() : value.length();
-    memcpy(record_data + record.offset()[i], value.data(), copy_len);
+    memcpy(record_data + record.offset()[i + normal_field_start_index], value.data(), copy_len);
   }
 
   record.set_data_owner(record_data, record_size);

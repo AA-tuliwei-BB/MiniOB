@@ -68,10 +68,13 @@ RC UpdatePhysicalOperator::next()
 
     RowTuple *row_tuple = static_cast<RowTuple *>(tuple);
     RID rid = row_tuple->record().rid();
-    rc = trx_->update_record(table_, rid, this->fields_, this->values_);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to update record: %s", strrc(rc));
-      return rc;
+    if (!visited[rid]) {
+      rc = trx_->update_record(table_, rid, this->fields_, this->values_);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to update record: %s", strrc(rc));
+        return rc;
+      }
+      visited[rid] = true;
     }
   }
 
@@ -80,6 +83,7 @@ RC UpdatePhysicalOperator::next()
 
 RC UpdatePhysicalOperator::close()
 {
+  visited.clear();
   if (!children_.empty()) {
     children_[0]->close();
   }

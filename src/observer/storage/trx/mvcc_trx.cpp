@@ -34,8 +34,8 @@ MvccTrxKit::~MvccTrxKit()
 RC MvccTrxKit::init()
 {
   fields_ = vector<FieldMeta>{
-    FieldMeta("__trx_xid_begin", AttrType::INTS, 0/*attr_offset*/, 4/*attr_len*/, false/*visible*/, false),
-    FieldMeta("__trx_xid_end",   AttrType::INTS, 0/*attr_offset*/, 4/*attr_len*/, false/*visible*/, false)
+    FieldMeta("__trx_xid_begin", AttrType::INTS, 4/*attr_len*/, 0/*id*/, false/*visible*/, false),
+    FieldMeta("__trx_xid_end",   AttrType::INTS, 4/*attr_len*/, 1/*id*/, false/*visible*/, false)
   };
 
   LOG_INFO("init mvcc trx kit done.");
@@ -174,7 +174,7 @@ RC MvccTrx::delete_record(Table * table, Record &record)
     // 当前不是多版本数据中的最新记录，不需要删除
     return RC::SUCCESS;
   }
-  
+
   end_field.set_int(record, -trx_id_);
   RC rc = log_manager_->append_log(CLogType::DELETE, trx_id_, table->table_id(), record.rid(), 0, 0, nullptr);
   ASSERT(rc == RC::SUCCESS, "failed to append delete record log. trx id=%d, table id=%d, rid=%s, record len=%d, rc=%s",
@@ -187,6 +187,50 @@ RC MvccTrx::delete_record(Table * table, Record &record)
 
 RC MvccTrx::update_record(Table *table, RID &rid, std::vector<std::string> &fields, std::vector<Value> &values)
 {
+  Field begin_field;
+  Field end_field;
+  trx_fields(table, begin_field, end_field);
+  Record record;
+  table->get_record(rid, record);
+
+  [[maybe_unused]] int32_t end_xid = end_field.get_int(record);
+  if (end_xid != trx_kit_.max_trx_id()) {
+    // 当前不是多版本数据中的最新记录，不需要更新
+    return RC::SUCCESS;
+  }
+
+  RC rc = delete_record(table, record);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+
+  begin_field.set_int(record, -trx_id_);
+  end_field.set_int(record, trx_kit_.max_trx_id());
+
+  rc = table->insert_record(record);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to insert record into table. rc=%s", strrc(rc));
+    return rc;
+  }
+  rc = table->update_record(record.rid(), fields, values);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to update record into table. rc=%s", strrc(rc));
+    return rc;
+  }
+  rid = record.rid();
+
+  rc = log_manager_->append_log(CLogType::INSERT, trx_id_, table->table_id(), record.rid(), record.len(), 0/*offset*/, record.data());
+  ASSERT(rc == RC::SUCCESS, "failed to append insert record log. trx id=%d, table id=%d, rid=%s, record len=%d, rc=%s",
+      trx_id_, table->table_id(), record.rid().to_string().c_str(), record.len(), strrc(rc));
+
+  pair<OperationSet::iterator, bool> ret = 
+        operations_.insert(Operation(Operation::Type::INSERT, table, record.rid()));
+  if (!ret.second) {
+    rc = RC::INTERNAL;
+    LOG_WARN("failed to insert operation(insertion) into operation set: duplicate");
+  }
+  return rc;
+
   return RC::SUCCESS;
 }
 
