@@ -44,6 +44,10 @@ RC JoinStmt::create(Db *db, JoinSqlNode &join_sql, std::vector<Table*>& tables, 
       join_sql.on_conditions,
       static_cast<int>(join_sql.on_conditions.size()),
       filter_stmt);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("cannot construct filter stmt");
+    return rc;
+  }
   stmt = new JoinStmt(tables, join_sql.join_list.size() / 2, filter_stmt);
   return RC::SUCCESS;
 }
