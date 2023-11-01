@@ -249,7 +249,9 @@ struct ConditionSqlNode
   std::unique_ptr<ExprSqlNode>  left_expression;       ///<条件语句的左表达式          
   CompOp                        comp;                  ///< comparison operator
   std::unique_ptr<ExprSqlNode>  right_expression;      ///< 条件语句的右表达式
+  std::unique_ptr<ParsedSqlNode> right_sub_query;
   ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c) {}
+  ConditionSqlNode(ExprSqlNode* l, ParsedSqlNode* r, CompOp c):left_expression(l), right_sub_query(r), comp(c) {}
   ConditionSqlNode(const ConditionSqlNode& other) = delete;
   ConditionSqlNode operator=(const ConditionSqlNode& other) = delete;
   ~ConditionSqlNode() = default;

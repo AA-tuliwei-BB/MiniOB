@@ -128,6 +128,8 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         GE
         NE
         IS_OP
+        IN_OP
+        EXIST_OP
         
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
@@ -930,6 +932,10 @@ condition:
     {
       $$ = new ConditionSqlNode($1, $3, $2);
     }
+    | complex_expr comp_op LBRACE select_stmt RBRACE
+    {
+      $$ = new ConditionSqlNode($1, $4, $2);
+    }
     ;
 
 comp_op:
@@ -943,7 +949,11 @@ comp_op:
     | IS_OP NOT { $$ = IS_NOT; }
     | LK { $$ = LIKE;  }
     | NOT LK { $$ = NOT_LIKE;  }
-    ;
+    | IN_OP { $$ = IN; }
+    | NOT IN_OP { $$ = NOT_IN; }
+    | EXIST_OP { $$ = EXIST; }
+    | NOT EXIST_OP { $$ = NOT_EXIST; }
+      ;
 
 load_data_stmt:
     LOAD DATA INFILE SSS INTO TABLE ID 

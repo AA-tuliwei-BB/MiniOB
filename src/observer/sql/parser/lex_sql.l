@@ -121,6 +121,8 @@ WHERE                                   RETURN_TOKEN(WHERE);
 AS                                      RETURN_TOKEN(AS);
 LIKE                                    RETURN_TOKEN(LK);
 IS                                      RETURN_TOKEN(IS_OP);
+IN                                      RETURN_TOKEN(IN_OP);
+EXIST                                   RETURN_TOKEN(EXIST_OP);
 NULL                                    RETURN_TOKEN(NULL_VAL);
 ORDER{WHITE_SPACE}BY                    RETURN_TOKEN(ORDER_BY);
 ASC                                     RETURN_TOKEN(ASC);
