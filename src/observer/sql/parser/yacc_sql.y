@@ -98,6 +98,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         STRING_T
         FLOAT_T
         DATE_T
+        TEXT_T
         NULL_VAL
         HELP
         EXIT
@@ -440,6 +441,7 @@ type:
     | STRING_T { $$=CHARS; }
     | FLOAT_T  { $$=FLOATS; }
     | DATE_T   { $$=DATES; }
+    | TEXT_T   { $$=TEXTS; }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
     INSERT INTO ID VALUES LBRACE value value_list RBRACE 

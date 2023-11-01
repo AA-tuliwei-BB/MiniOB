@@ -335,7 +335,8 @@ struct UpdateSqlNode
   std::string                   relation_name;         ///< Relation to update
   std::vector<std::string>      name;                  ///< 更新的字段的名称
   std::vector<Value>            value;                 ///< 更新的字段的值
-  std::vector<ConditionSqlNode*> conditions;
+  std::vector<ConditionSqlNode*> conditions;           ///< 更新的过滤条件
+  std::vector<SelectSqlNode*>   sub_select;
 };
 
 /**

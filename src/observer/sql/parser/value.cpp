@@ -255,7 +255,8 @@ int Value::compare(const Value &other) const
 int Value::get_int() const
 {
     switch (attr_type_) {
-    case CHARS: {
+    case CHARS: 
+    case TEXTS:{
         try {
             return (int)(std::stol(str_value_));
         } catch (std::exception const& ex) {
@@ -283,7 +284,8 @@ int Value::get_int() const
 float Value::get_float() const
 {
     switch (attr_type_) {
-    case CHARS: {
+    case CHARS: 
+    case TEXTS: {
         try {
             return std::stof(str_value_);
         } catch (std::exception const& ex) {
@@ -316,7 +318,8 @@ std::string Value::get_string() const
 bool Value::get_boolean() const
 {
     switch (attr_type_) {
-    case CHARS: {
+    case CHARS: 
+    case TEXTS: {
         try {
             float val = std::stof(str_value_);
             if (val >= EPSILON || val <= -EPSILON) {
@@ -390,7 +393,7 @@ bool Value::try_cast(AttrType type){
             break;
         }
         case CHARS:
-        case TEXTS:{
+        case TEXTS: {
             str_value_ = get_string();
             if(str_value_.empty())
             return false;

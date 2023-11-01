@@ -92,7 +92,16 @@ private:
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
+  std::vector<Table *> join_tables_;
+  std::vector<Field> join_fields_;
   std::vector<Field> orders_fields_;
   std::vector<bool> asc_; // 是否升序
-  
+  std::unique_ptr<SelectStmt> sub_query;
+  enum class Type{
+    IN,
+    EXIST,
+    NOT_IN,
+    NOT_EXIST
+  };
+  Type type_;
 };

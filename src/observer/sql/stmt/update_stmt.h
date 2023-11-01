@@ -29,7 +29,7 @@ class UpdateStmt : public Stmt
 {
 public:
   UpdateStmt() = default;
-  UpdateStmt(Table *table, const std::string *fields, const Value *values, int value_amount, FilterStmt *filter_stmt);
+  UpdateStmt(Table *table, const std::string *fields, const Value *values, int value_amount, FilterStmt *filter_stmt, std::vector<SelectStmt*>* sub_select = nullptr);
 
 public:
   static RC create(Db *db, UpdateSqlNode &update_sql, Stmt *&stmt);
@@ -60,11 +60,17 @@ public:
   {
     return filter_stmt_;
   }
+  std::vector<SelectStmt*>* sub_select() const
+  {
+    return sub_select_;
+  }
 
 private:
   Table *table_ = nullptr;
   const std::string *fields_ = nullptr;
   const Value *values_ = nullptr;
+  /* 如果Value是undefined，取sub_select_的下一条stmt为set参数，否则取values_中Value为参数 */
+  std::vector<SelectStmt*>* sub_select_ = nullptr;
   int value_amount_ = 0;
   FilterStmt *filter_stmt_ = nullptr;
 };

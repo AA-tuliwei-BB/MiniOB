@@ -14,12 +14,13 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/update_stmt.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/select_stmt.h"
 #include "storage/db/db.h"
 #include "common/lang/comparator.h"
 
 
-UpdateStmt::UpdateStmt(Table *table, const std::string *fields, const Value *values, int value_amount, FilterStmt *filter_stmt)
-    : table_(table), fields_(fields), values_(values), value_amount_(value_amount), filter_stmt_(filter_stmt)
+UpdateStmt::UpdateStmt(Table *table, const std::string *fields, const Value *values, int value_amount, FilterStmt *filter_stmt, std::vector<SelectStmt*>* sub_select)
+    : table_(table), fields_(fields), values_(values), value_amount_(value_amount), filter_stmt_(filter_stmt), sub_select_(sub_select)
 {}
 
 RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)

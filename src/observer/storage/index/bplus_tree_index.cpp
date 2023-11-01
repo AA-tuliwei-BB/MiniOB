@@ -95,7 +95,7 @@ RC BplusTreeIndex::insert_entry(const Record &record, const RID *rid)
     index_handler_.get_entry(data, field_meta_.len(), rids);
     if (rids.size() != 0) {
       LOG_WARN("Insert duplicate values to unique index!");
-      return RC::INTERNAL;
+      return RC::SUCCESS;
     }
   }
   return index_handler_.insert_entry(data, rid);
