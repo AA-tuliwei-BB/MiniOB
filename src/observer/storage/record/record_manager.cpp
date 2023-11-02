@@ -718,7 +718,7 @@ RC RecordFileHandler::insert_record(const Record &record, RID *rid)
       return ret;
     }
 
-    if (record_page_handler.free_space() >= extra.len) {
+    if (record_page_handler.free_space() >= extra.len + sizeof(int)) {
       page_found = true;
       break;
     } else if (record_page_handler.is_full()) {
