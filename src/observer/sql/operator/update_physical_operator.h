@@ -37,4 +37,5 @@ private:
   std::vector<Value> values_;
   std::map<RID, bool> visited;
   Trx *trx_ = nullptr;
+  bool morethan1row = false;
 };

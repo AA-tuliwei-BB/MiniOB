@@ -43,8 +43,7 @@ RC UpdatePhysicalOperator::open(Trx *trx)
         }
         rc = sub_select->next();
         if (rc == RC::SUCCESS) {
-          LOG_ERROR("Update: sub select is more than 1 row!");
-          return RC::INTERNAL;
+          morethan1row = true;
         }
       }
       rc = sub_select->close();
@@ -69,6 +68,10 @@ RC UpdatePhysicalOperator::next()
 
   PhysicalOperator *child = children_[0].get();
   while (RC::SUCCESS == (rc = child->next())) {
+    if (morethan1row) {
+      LOG_ERROR("update-select: sub query more than 1 row");
+      return RC::INTERNAL;
+    }
     Tuple *tuple = child->current_tuple();
     if (nullptr == tuple) {
       LOG_WARN("failed to get current record: %s", strrc(rc));

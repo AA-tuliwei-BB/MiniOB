@@ -405,8 +405,7 @@ RC Table::get_record(const RID &rid, Record &record)
 
 RC Table::delete_from_index(const Record &record)
 {
-  bool tmp;
-  return delete_entry_of_indexes(record, record.rid(), tmp);
+  return delete_entry_of_indexes(record, record.rid(), false);
 }
 
 RC Table::insert_into_index(const Record &record)
@@ -664,10 +663,10 @@ RC Table::delete_entry_of_indexes(const Record &record, const RID &rid, bool err
 {
   RC rc = RC::SUCCESS;
   for (Index *index : indexes_) {
-    rc = index->delete_entry(record, &rid);
-    if (rc != RC::SUCCESS) {
-      if (rc != RC::RECORD_INVALID_KEY || !error_on_not_exists) {
-        break;
+    RC rc2 = index->delete_entry(record, &rid);
+    if (rc2 != RC::SUCCESS) {
+      if (rc2 != RC::RECORD_INVALID_KEY || !error_on_not_exists) {
+        rc = rc2;
       }
     }
   }
