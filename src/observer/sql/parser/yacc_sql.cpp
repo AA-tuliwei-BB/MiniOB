@@ -2075,7 +2075,7 @@ yyreduce:
       (yyval.attr_info) = new AttrInfoSqlNode;
       (yyval.attr_info)->type = (AttrType)(yyvsp[-1].number);
       (yyval.attr_info)->name = (yyvsp[-2].string);
-      (yyval.attr_info)->length = 4;
+      (yyval.attr_info)->length = (yyval.attr_info)->type == AttrType::TEXTS ? 0 : 4;
       (yyval.attr_info)->nullable = (bool)(yyvsp[0].number);
       free((yyvsp[-2].string));
     }
@@ -2085,7 +2085,7 @@ yyreduce:
   case 42: /* null_def: %empty  */
 #line 427 "yacc_sql.y"
     {
-      (yyval.number) = 0;
+      (yyval.number) = 1;
     }
 #line 2091 "yacc_sql.cpp"
     break;

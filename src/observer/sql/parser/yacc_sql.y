@@ -417,7 +417,7 @@ attr_def:
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
-      $$->length = 4;
+      $$->length = $$->type == AttrType::TEXTS ? 0 : 4;
       $$->nullable = (bool)$3;
       free($1);
     }
@@ -425,7 +425,7 @@ attr_def:
 null_def:
     /* empty */
     {
-      $$ = 0;
+      $$ = 1;
     }
     | NOT NULL_VAL
     {
