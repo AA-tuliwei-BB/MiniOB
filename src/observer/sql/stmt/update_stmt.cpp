@@ -74,12 +74,11 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
         if(value_type == AttrType::UNDEFINED){
           value_type = sub_select_stmts->at(select_index++)->value_type();
         }
-        if (!common::field_type_compare_compatible_table[field_type][value_type] && (!values[i].is_null() || !field_meta->nullable())) {  // TODO try to convert the value type to field type
-          LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
-            table_name, field_meta->name(), field_type, value_type);
-          return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-          
-        }
+        // if (!common::field_type_compare_compatible_table[field_type][value_type] && (!values[i].is_null() || !field_meta->nullable())) {  // TODO try to convert the value type to field type
+        //   LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
+        //     table_name, field_meta->name(), field_type, value_type);
+        //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        // }
         // else if(field_type != value_type && !update.value[i].try_cast(field_type)){
         //   LOG_WARN("unable to cast value type to field type. table=%s, field=%s, field type=%d, value_type=%d",
         //     table_name, field_meta->name(), field_type, value_type);

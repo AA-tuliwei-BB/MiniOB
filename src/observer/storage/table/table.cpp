@@ -258,6 +258,19 @@ RC Table::insert_record(Record &record)
 
 RC Table::update_record(RID &rid, std::vector<std::string> &fields, std::vector<Value>&values)
 {
+  // 对value进行类型转化
+  int fields_size = static_cast<int>(fields.size());
+  for (int i = 0; i < fields_size; ++i) {
+    const FieldMeta *field_meta = table_meta().field(fields[i].c_str());
+    if (values[i].attr_type() != field_meta->type()) {
+      bool result = values[i].try_cast(field_meta->type());
+      if (!result) {
+        LOG_ERROR("Fail to cast values to fields");
+        return RC::INTERNAL;
+      }
+    }
+  }
+
   // 删除原索引，修改，创建新索引
   Record before;
   get_record(rid, before);
