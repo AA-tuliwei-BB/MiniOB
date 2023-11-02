@@ -27,10 +27,7 @@ CalcSqlNode::~CalcSqlNode()
     expressions.clear();
 }
 
-ParsedSqlNode::ParsedSqlNode()
-    : flag(SCF_ERROR)
-{
-}
+
 
 ParsedSqlNode::ParsedSqlNode(SqlCommandFlag _flag)
     : flag(_flag)

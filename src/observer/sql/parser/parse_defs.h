@@ -331,7 +331,7 @@ struct DeleteSqlNode
   std::string                   relation_name;  ///< Relation to delete from
   std::vector<ConditionSqlNode*> conditions;
 };
-
+class ParsedSqlNode;
 /**
  * @brief 描述一个update语句
  * @ingroup SQLParser
@@ -341,8 +341,8 @@ struct UpdateSqlNode
   std::string                   relation_name;         ///< Relation to update
   std::vector<std::string>      name;                  ///< 更新的字段的名称
   std::vector<Value>            value;                 ///< 更新的字段的值
+  std::vector<std::unique_ptr<ParsedSqlNode>> sub_select;
   std::vector<ConditionSqlNode*> conditions;           ///< 更新的过滤条件
-  std::vector<SelectSqlNode*>   sub_select;
 };
 
 /**
@@ -424,7 +424,7 @@ struct LoadDataSqlNode
   std::string relation_name;
   std::string file_name;
 };
-
+class ParsedSqlNode;
 /**
  * @brief 设置变量的值
  * @ingroup SQLParser
@@ -435,6 +435,7 @@ struct SetVariableSqlNode
   // vector<std::pair<std::string, Value>> val_list;
   std::vector<std::string> name;
   std::vector<Value>       value;
+  std::vector<std::unique_ptr<ParsedSqlNode>> sub_select;
 };
 
 class ParsedSqlNode;
@@ -499,7 +500,7 @@ enum SqlCommandFlag
 class ParsedSqlNode
 {
 public:
-  enum SqlCommandFlag       flag;
+  enum SqlCommandFlag       flag = SCF_ERROR;
   ErrorSqlNode              error;
   CalcSqlNode               calc;
   SelectSqlNode             selection;
@@ -516,7 +517,7 @@ public:
   SetVariableSqlNode        set_variable;
 
 public:
-  ParsedSqlNode();
+  ParsedSqlNode() = default;
   explicit ParsedSqlNode(SqlCommandFlag flag);
 };
 

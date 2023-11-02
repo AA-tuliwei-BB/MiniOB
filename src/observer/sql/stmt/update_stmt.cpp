@@ -37,7 +37,18 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
     LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
-
+  std::vector<SelectStmt *> *sub_select_stmts;
+  sub_select_stmts = new std::vector<SelectStmt *>;
+  for (auto &sub_sql_node : update.sub_select) {
+    Stmt *sub_select_stmt = nullptr;
+    RC rc = SelectStmt::create(db, sub_sql_node->selection, sub_select_stmt);
+    if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to create sub select statement. rc=%d:%s", rc, strrc(rc));
+    return rc;
+  }
+    sub_select_stmts->push_back(static_cast<SelectStmt *>(sub_select_stmt));
+  }
+  int select_size = sub_select_stmts->size(), select_index = 0;
   // TODO when update 多词条修改
   const Value *values = update.value.data();
   const std::string *fields = update.name.data();
@@ -58,8 +69,11 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
       const FieldMeta *field_meta = table_meta.field(j + sys_field_num);
       if (field_meta->name() == fields[i]) {
         bFieldExists = true;
-        const AttrType field_type = field_meta->type();
-        const AttrType value_type = values[i].attr_type();
+        AttrType field_type = field_meta->type();
+        AttrType value_type = values[i].attr_type();
+        if(value_type == AttrType::UNDEFINED){
+          value_type = sub_select_stmts->at(select_index++)->value_type();
+        }
         if (!common::field_type_compare_compatible_table[field_type][value_type] && (!values[i].is_null() || !field_meta->nullable())) {  // TODO try to convert the value type to field type
           LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
             table_name, field_meta->name(), field_type, value_type);
@@ -89,13 +103,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
     return rc;
   }
 
-  std::vector<SelectStmt *> *sub_select_stmts;
-  sub_select_stmts = new std::vector<SelectStmt *>;
-  for (auto &sub_sql_node : update.sub_select) {
-    Stmt *sub_select_stmt = nullptr;
-    RC rc = SelectStmt::create(db, *sub_sql_node, sub_select_stmt);
-    sub_select_stmts->push_back(static_cast<SelectStmt *>(sub_select_stmt));
-  }
+
 
   stmt = new UpdateStmt(table, fields, values, value_num, filter_stmt, sub_select_stmts);
   return RC::SUCCESS;

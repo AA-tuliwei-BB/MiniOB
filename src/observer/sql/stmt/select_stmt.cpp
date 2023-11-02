@@ -173,6 +173,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->is_aggregate_ = is_aggregate;
+  select_stmt->expression_type = expressions.empty() ? UNDEFINED : expressions[0]->value_type();
   select_stmt->expressions_.swap(expressions);
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);

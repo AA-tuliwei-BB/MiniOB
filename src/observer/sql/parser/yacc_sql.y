@@ -545,6 +545,7 @@ update_stmt:      /*  update 语句的语法解析树*/
       $$->update.relation_name = $2;
       $$->update.name.swap($3->set_variable.name);
       $$->update.value.swap($3->set_variable.value);
+      $$->update.sub_select.swap($3->set_variable.sub_select);
       if ($4 != nullptr) {
         $$->update.conditions.swap(*$4);
         delete $4;
@@ -988,6 +989,17 @@ set_variable_stmt:
       free($2);
       delete $4;
     }
+    | SET ID EQ LBRACE select_stmt RBRACE set_variable_list
+    {
+      if($7 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $7;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(Value());
+      $$->set_variable.sub_select.push_back(std::unique_ptr<ParsedSqlNode>($5));
+      free($2);
+    }
     ;
 
 set_variable_list:
@@ -995,7 +1007,7 @@ set_variable_list:
     {
       $$ = nullptr;
     }
-    |COMMA ID EQ value set_variable_list
+    | COMMA ID EQ value set_variable_list
     {
       if($5 == nullptr)
         $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
@@ -1005,6 +1017,17 @@ set_variable_list:
       $$->set_variable.value.push_back(*$4);
       free($2);
       delete $4;
+    }
+    | COMMA ID EQ LBRACE select_stmt RBRACE set_variable_list
+    {
+      if($7 == nullptr)
+        $$ = new ParsedSqlNode(SCF_SET_VARIABLE);
+      else $$ = $7;
+
+      $$->set_variable.name.push_back(std::string($2));
+      $$->set_variable.value.push_back(Value());
+      $$->set_variable.sub_select.push_back(std::unique_ptr<ParsedSqlNode>($5));
+      free($2);
     }
     ;
 

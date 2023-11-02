@@ -59,6 +59,10 @@ public:
   {
     return alias_;
   }
+  const AttrType value_type() const
+  {
+    return expression_type;
+  }
   std::vector<AggrFuncExpr*> &aggr_list()
   {
     return aggr_list_;
@@ -97,6 +101,7 @@ private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   int table_size_in_from;
+  AttrType expression_type;
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
 
