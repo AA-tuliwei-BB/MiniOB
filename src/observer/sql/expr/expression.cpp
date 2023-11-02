@@ -434,6 +434,7 @@ RC AggrFuncExpr::add_value(const Tuple &tuple)
     min_.set_float(std::min(min_.get_float(), son_value.get_float()));
     max_.set_float(std::max(max_.get_float(), son_value.get_float()));
   } break;
+  case TEXTS:
   case CHARS: {
     min_.set_string(std::min(min_.get_string(), son_value.get_string()).c_str());
     max_.set_string(std::max(max_.get_string(), son_value.get_string()).c_str());

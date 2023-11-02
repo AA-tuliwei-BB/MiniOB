@@ -21,11 +21,11 @@ See the Mulan PSL v2 for more details. */
 #include <cmath>
 #include "value.h"
 
-const char* ATTR_TYPE_NAME[] = { "undefined", "chars", "ints", "floats", "dates", "booleans" };
+const char* ATTR_TYPE_NAME[] = { "undefined", "chars", "ints", "dates", "floats", "null", "booleans", "texts" };
 
 const char* attr_type_to_string(AttrType type)
 {
-    if (type >= UNDEFINED && type <= FLOATS) {
+    if (type >= UNDEFINED && type <= TEXTS) {
         return ATTR_TYPE_NAME[type];
     }
     return "unknown";
@@ -73,6 +73,7 @@ Value::Value(const char* s, int len /*= 0*/)
 void Value::set_data(char* data, int length)
 {
     switch (attr_type_) {
+    case TEXTS:
     case CHARS: {
         set_string(data, length);
     } break;
@@ -157,6 +158,7 @@ void Value::set_value(const Value& value)
     case DATES: {
         set_date(date_t(value.get_int()));
     } break;
+    case TEXTS:
     case CHARS: {
         set_string(value.get_string().c_str());
     } break;
@@ -172,6 +174,7 @@ void Value::set_value(const Value& value)
 const char* Value::data() const
 {
     switch (attr_type_) {
+    case TEXTS:
     case CHARS: {
         return str_value_.c_str();
     } break;
@@ -197,6 +200,7 @@ std::string Value::to_string() const
     case BOOLEANS: {
         os << num_value_.bool_value_;
     } break;
+    case TEXTS:
     case CHARS: {
         os << str_value_;
     } break;
@@ -224,6 +228,7 @@ int Value::compare(const Value &other) const
       case DATES: {
         return common::compare_int((void *)&this->num_value_.date_value_, (void *)&other.num_value_.date_value_);
       }
+      case TEXTS:
       case CHARS: {
         return common::compare_string((void *)this->str_value_.c_str(),
             this->str_value_.length(),
