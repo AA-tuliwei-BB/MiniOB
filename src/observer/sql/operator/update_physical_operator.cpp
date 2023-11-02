@@ -38,6 +38,11 @@ RC UpdatePhysicalOperator::open(Trx *trx)
         LOG_ERROR("Update: failed to get cell of sub select!");
         return rc;
       }
+      rc = sub_select->next();
+      if (rc == RC::SUCCESS) {
+        LOG_ERROR("Update: sub select is more than 1 row!");
+        return RC::INTERNAL;
+      }
       rc = sub_select->close();
       if (rc != RC::SUCCESS) {
         LOG_ERROR("Update: failed to close sub select!");
