@@ -79,11 +79,12 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
             table_name, field_meta->name(), field_type, value_type);
           return RC::SCHEMA_FIELD_TYPE_MISMATCH;
           
-        } else if(field_type != value_type && !update.value[i].try_cast(field_type)){
-          LOG_WARN("unable to cast value type to field type. table=%s, field=%s, field type=%d, value_type=%d",
-            table_name, field_meta->name(), field_type, value_type);
-          return RC::SCHEMA_FIELD_TYPE_MISMATCH;
         }
+        // else if(field_type != value_type && !update.value[i].try_cast(field_type)){
+        //   LOG_WARN("unable to cast value type to field type. table=%s, field=%s, field type=%d, value_type=%d",
+        //     table_name, field_meta->name(), field_type, value_type);
+        //   return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        // }
       }
     }
     if (!bFieldExists) {
