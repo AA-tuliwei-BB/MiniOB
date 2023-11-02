@@ -29,19 +29,23 @@ RC UpdatePhysicalOperator::open(Trx *trx)
         return rc;
       }
       rc = sub_select->next();
-      if (rc != RC::SUCCESS) {
+      if (rc != RC::SUCCESS && rc != RC::RECORD_EOF) {
         LOG_ERROR("Update: failed to get next of sub select!");
         return rc;
       }
-      rc = sub_select->current_tuple()->cell_at(0, value);
-      if (rc != RC::SUCCESS) {
-        LOG_ERROR("Update: failed to get cell of sub select!");
-        return rc;
-      }
-      rc = sub_select->next();
-      if (rc == RC::SUCCESS) {
-        LOG_ERROR("Update: sub select is more than 1 row!");
-        return RC::INTERNAL;
+      if (rc == RC::RECORD_EOF) {
+        value.set_null();
+      } else {
+        rc = sub_select->current_tuple()->cell_at(0, value);
+        if (rc != RC::SUCCESS) {
+          LOG_ERROR("Update: failed to get cell of sub select!");
+          return rc;
+        }
+        rc = sub_select->next();
+        if (rc == RC::SUCCESS) {
+          LOG_ERROR("Update: sub select is more than 1 row!");
+          return RC::INTERNAL;
+        }
       }
       rc = sub_select->close();
       if (rc != RC::SUCCESS) {
