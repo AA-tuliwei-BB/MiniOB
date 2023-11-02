@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "storage/field/field.h"
 #include <sstream>
+#include <cmath>
 #include "value.h"
 
 const char* ATTR_TYPE_NAME[] = { "undefined", "chars", "ints", "floats", "dates", "booleans" };
@@ -294,7 +295,7 @@ int Value::get_int() const
         return num_value_.int_value_;
     }
     case FLOATS: {
-        return (int)(num_value_.float_value_);
+        return (int)(round(num_value_.float_value_));
     }
     case BOOLEANS: {
         return (int)(num_value_.bool_value_);
