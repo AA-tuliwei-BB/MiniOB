@@ -89,6 +89,9 @@ RC BplusTreeIndex::close()
 
 RC BplusTreeIndex::insert_entry(const Record &record, const RID *rid)
 {
+  if (record.is_null(field_meta_.id())) {
+    return RC::SUCCESS;
+  }
   const char * data = record.data() + record.offset()[field_meta_.id()];
   if (is_unique()) {
     std::list<RID> rids;
