@@ -239,14 +239,40 @@ int Value::compare(const Value &other) const
         LOG_WARN("unsupported type: %d", this->attr_type_);
       }
     }
+  } else if (this->attr_type_ == NULLS || other.attr_type_ == NULLS) {
+    return -1;
   } else if (this->attr_type_ == INTS && other.attr_type_ == FLOATS) {
     float this_data = this->num_value_.int_value_;
     return common::compare_float((void *)&this_data, (void *)&other.num_value_.float_value_);
-  } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
-    float other_data = other.num_value_.int_value_;
+  } else if (this->attr_type_ == FLOATS) {
+    Value copy_other(other);
+    bool cast_result = copy_other.try_cast(FLOATS);
+    if (!cast_result) {
+      return -1;
+    }
+    float other_data = copy_other.num_value_.float_value_;
     return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
-  } else if (this->attr_type_ == NULLS || other.attr_type_ == NULLS) {
-    return -1;
+  } else if (this->attr_type_ == INTS) {
+    Value copy_other(other);
+    bool cast_result = copy_other.try_cast(INTS);
+    if (!cast_result) {
+      return -1;
+    }
+    int this_data = this->num_value_.int_value_;
+    return common::compare_int((void *)&this_data, (void *)&copy_other.num_value_.int_value_);
+  } else if (this->attr_type_ == CHARS || this->attr_type_ == TEXTS) {
+    Value copy_this(*this);
+    bool  cast_result = copy_this.try_cast(other.attr_type_);
+    if (!cast_result) {
+      return -1;
+    }
+    if (other.attr_type_ == FLOATS) {
+      float other_data = other.num_value_.float_value_;
+      return common::compare_float((void *)copy_this.data(), (void *)&other_data);
+    } else {
+      int other_data = other.num_value_.int_value_;
+      return common::compare_int((void *)copy_this.data(), (void *)&other_data);
+    }
   }
   LOG_WARN("not supported");
   return -1;  // TODO return rc?
