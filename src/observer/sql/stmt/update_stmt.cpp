@@ -65,6 +65,12 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt)
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; ++i) {// 用于拓展多词条
     bool bFieldExists = false;
+    if (values[i].attr_type() == CHARS || values[i].attr_type() == TEXTS) {
+      if (values[i].length() > 65535) {
+        LOG_ERROR("TEXT TOO LONG");
+        return RC::INTERNAL;
+      }
+    }
     for (int j = 0; j < field_num; j++) {
       const FieldMeta *field_meta = table_meta.field(j + sys_field_num);
       if (field_meta->name() == fields[i]) {

@@ -51,6 +51,12 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
   // check fields type
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
+    if (values[i].attr_type() == CHARS || values[i].attr_type() == TEXTS) {
+      if (values[i].length() > 65535) {
+        LOG_ERROR("TEXT TOO LONG");
+        return RC::INTERNAL;
+      }
+    }
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
     const AttrType field_type = field_meta->type();
     const AttrType value_type = values[i].attr_type();
