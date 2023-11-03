@@ -279,10 +279,18 @@ RC LogicalPlanGenerator::create_plan(
 
       ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
       cmp_exprs.emplace_back(cmp_expr);
+      
     } else {
       std::unique_ptr<LogicalOperator> val_list(new ValueListLogicalOperator(filter_unit->value_list()));
       sub_querys.push_back(std::move(val_list));
+      compop_sub_query_comp.push_back(filter_unit->comp());
       both_is_sub_query.push_back(filter_unit->left_is_sub_query());
+      if(left->type() != ExprType::FIELD) {
+        LOG_WARN("left expression should be fieldexpr in condition stmt with sub query");
+        return RC::INVALID_ARGUMENT;
+      }
+      FieldExpr* left_field = static_cast<FieldExpr*>(left.get());
+      left_expressions_sub_query_comp.push_back(FieldExpr(left_field->field()));
     }
     
   }
