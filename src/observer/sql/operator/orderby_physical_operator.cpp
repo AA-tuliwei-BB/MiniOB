@@ -30,6 +30,7 @@ RC OrderbyPhysicalOperator::next()
   if (!emitted_) {
     RC rc = RC::SUCCESS;
     emitted_ = true;
+    rows_.clear();
     std::vector<TupleCellSpec *> speces;
     for (const Field &order : orders_) {
       speces.push_back(new TupleCellSpec(order.table_name(), order.field_name()));
