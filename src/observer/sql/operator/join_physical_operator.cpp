@@ -92,6 +92,18 @@ RC NestedLoopJoinPhysicalOperator::close()
       right_closed_ = true;
     }
   }
+
+  left_ = nullptr;
+  right_ = nullptr;
+  left_tuple_ = nullptr;
+  right_tuple_ = nullptr;
+  round_done_ = true;
+  right_closed_ = true;
+
+  bufferred = false;
+  left_bufferred = false;
+  right_bufferred = false;
+
   return rc;
 }
 
