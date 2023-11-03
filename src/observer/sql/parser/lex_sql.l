@@ -129,6 +129,7 @@ NULL                                    RETURN_TOKEN(NULL_VAL);
 ORDER{WHITE_SPACE}BY                    RETURN_TOKEN(ORDER_BY);
 ASC                                     RETURN_TOKEN(ASC);
 AND                                     RETURN_TOKEN(AND);
+OR                                      RETURN_TOKEN(OR);
 NOT                                     RETURN_TOKEN(NOT);
 INSERT                                  RETURN_TOKEN(INSERT);
 INTO                                    RETURN_TOKEN(INTO);

@@ -118,7 +118,8 @@ RC LogicalPlanGenerator::create_plan(
   }
   if (predicate_oper) {
     if (logical_operator) {
-      predicate_oper->add_child(std::move(logical_operator));
+      PredicateLogicalOperator* tmp = static_cast<PredicateLogicalOperator*>(predicate_oper.get());
+      tmp->set_table_get(std::move(logical_operator));
       logical_operator = std::move(predicate_oper);
     }
   }
@@ -191,7 +192,8 @@ RC LogicalPlanGenerator::create_plan(
 
   if (predicate_oper) {
     if (table_oper) {
-      predicate_oper->add_child(std::move(table_oper));
+      PredicateLogicalOperator* tmp = static_cast<PredicateLogicalOperator*>(predicate_oper.get());
+      tmp->set_table_get(std::move(table_oper));
     }
   }
 
@@ -224,22 +226,52 @@ RC LogicalPlanGenerator::create_plan(
 {
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
+  std::vector<FieldExpr> left_expressions_sub_query_comp;
+  std::vector<CompOp> compop_sub_query_comp;
+  std::vector<std::unique_ptr<LogicalOperator>> right_querys;
+  RC rc;
   for (FilterUnit *filter_unit : filter_units) {
     FilterObj filter_obj_left = filter_unit->left();
-    FilterObj filter_obj_right = filter_unit->right();
-
     unique_ptr<Expression> left(std::move(filter_obj_left.expression));
+    if(filter_unit->right_is_sub_query()) {
+      if(left->type() != ExprType::FIELD){
+        LOG_WARN("left expression should be fieldexpr in condition stmt with sub query");
+        return RC::INVALID_ARGUMENT;
+      }
+      FieldExpr* left_field = static_cast<FieldExpr*>(left.get());
+      left_expressions_sub_query_comp.push_back(FieldExpr(left_field->field()));
+      compop_sub_query_comp.push_back(filter_unit->comp());
 
-    unique_ptr<Expression> right(std::move(filter_obj_right.expression));
+      std::unique_ptr<SelectStmt> right_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
+      std::unique_ptr<LogicalOperator> right_query(nullptr);
+      rc = create_plan(right_stmt.get(), right_query);
+      if(rc != RC::SUCCESS){
+        LOG_WARN("unable to generate right sub query's logical operator, error code = %d", (int)rc);
+        return rc;
+      }
+      right_querys.push_back(std::move(right_query));
+    } else {
+      FilterObj filter_obj_right = filter_unit->right();
+      unique_ptr<Expression> right(std::move(filter_obj_right.expression));
 
-    ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
-    cmp_exprs.emplace_back(cmp_expr);
+      ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
+      cmp_exprs.emplace_back(cmp_expr);
+    }
+    
   }
 
   unique_ptr<PredicateLogicalOperator> predicate_oper;
-  if (!cmp_exprs.empty()) {
-    unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(ConjunctionExpr::Type::AND, cmp_exprs));
-    predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr)));
+  if (!cmp_exprs.empty() || !right_querys.empty()) {
+    unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(filter_stmt->get_conj() ? ConjunctionExpr::Type::OR : ConjunctionExpr::Type::AND, cmp_exprs));
+    if(!right_querys.empty()){
+      predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr), left_expressions_sub_query_comp, compop_sub_query_comp, filter_stmt->get_conj()));
+      predicate_oper->add_child(std::unique_ptr<LogicalOperator>(nullptr));
+      for(auto &sub_query : right_querys) {
+        predicate_oper->add_child(std::move(sub_query));
+      }
+    } else {
+      predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr)));
+    }
   }
 
   logical_operator = std::move(predicate_oper);

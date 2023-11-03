@@ -39,7 +39,11 @@ public:
   std::vector<FieldExpr> &sub_query_fields() { return sub_query_fields_; }
   std::vector<CompOp> &sub_query_opts() { return sub_query_opts_; }
   bool sub_query_connector() { return sub_query_connector_; }
-
+  void set_table_get(std::unique_ptr<LogicalOperator> table_get_oper) {
+    if(children_.empty()) {
+      children_.push_back(std::move(table_get_oper));
+    } else children_[0] = std::move(table_get_oper);
+  }
 private:
   std::vector<FieldExpr> sub_query_fields_;
   std::vector<CompOp> sub_query_opts_;

@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 class Db;
 class Table;
 class FieldMeta;
+class SelectStmt;
 
 struct FilterObj 
 {
@@ -49,6 +50,12 @@ public:
   FilterUnit(FilterObj &l, FilterObj &r){
     left_ = std::move(l);
     right_ = std::move(r);
+    right_is_sub_query_ = false;
+  }
+  FilterUnit(FilterObj &l, SelectStmt *r){
+    left_ = std::move(l);
+    sub_query = r;
+    right_is_sub_query_ = true;
   }
   ~FilterUnit() = default;
 
@@ -79,11 +86,20 @@ public:
   {
     return std::move(right_);
   }
+  SelectStmt* right_query()
+  {
+    return sub_query;
+  }
+  bool right_is_sub_query(){
+    return right_is_sub_query_;
+  }
 
 private:
   CompOp comp_ = NO_OP;
   FilterObj left_;
   FilterObj right_;
+  bool right_is_sub_query_;
+  SelectStmt* sub_query;
 };
 
 /**
@@ -102,6 +118,9 @@ public:
     return filter_units_;
   }
 
+  void set_conj(bool conj) {  conjuction_type = conj;  }
+
+  bool get_conj() {  return conjuction_type;  }
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
       std::vector<ConditionSqlNode *>& conditions, int condition_num, FilterStmt *&stmt);
@@ -110,5 +129,6 @@ public:
       ConditionSqlNode &condition, FilterUnit *&filter_unit);
 
 private:
-  std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
+  std::vector<FilterUnit *> filter_units_;  // 有and/or两种关系，见conjuction_type
+  bool conjuction_type;
 };

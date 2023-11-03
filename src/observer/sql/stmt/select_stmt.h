@@ -108,7 +108,6 @@ private:
   std::vector<std::unique_ptr<JoinStmt>> joins_;
   std::vector<Field> orders_fields_;
   std::vector<bool> asc_; // 是否升序
-  std::unique_ptr<SelectStmt> sub_query;
   enum class Type{
     IN,
     EXIST,

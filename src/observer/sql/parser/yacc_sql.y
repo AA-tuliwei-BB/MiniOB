@@ -113,6 +113,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         ASC
         AS
         AND
+        OR
         NOT
         SET
         ON
@@ -925,6 +926,12 @@ condition_list:
     }
     | condition AND condition_list {
       $$ = $3;
+      $1->set_conj(false);
+      $$->emplace_back($1);
+    }
+    | condition OR condition_list {
+      $$ = $3;
+      $1->set_conj(true);
       $$->emplace_back($1);
     }
     ;
@@ -936,6 +943,15 @@ condition:
     | complex_expr comp_op LBRACE select_stmt RBRACE
     {
       $$ = new ConditionSqlNode($1, $4, $2);
+    }
+    | LBRACE select_stmt RBRACE comp_op complex_expr
+    {
+      $$ = new ConditionSqlNode($5, $2, $4);
+      $$->reverse_op();
+    }
+    | EXIST_OP LBRACE select_stmt RBRACE 
+    {
+      
     }
     ;
 
@@ -952,9 +968,7 @@ comp_op:
     | NOT LK { $$ = NOT_LIKE;  }
     | IN_OP { $$ = IN; }
     | NOT IN_OP { $$ = NOT_IN; }
-    | EXIST_OP { $$ = EXIST; }
-    | NOT EXIST_OP { $$ = NOT_EXIST; }
-      ;
+    ;
 
 load_data_stmt:
     LOAD DATA INFILE SSS INTO TABLE ID 

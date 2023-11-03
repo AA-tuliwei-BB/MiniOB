@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "common/lang/comparator.h"
 #include "sql/stmt/filter_stmt.h"
+#include "sql/stmt/select_stmt.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
 
@@ -45,7 +46,8 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
     }
     tmp_stmt->filter_units_.push_back(filter_unit);
   }
-
+  if(condition_num != 0)
+    tmp_stmt->set_conj(conditions[condition_num - 1]->conjunction_type);
   stmt = tmp_stmt;
   return rc;
 }
@@ -94,7 +96,6 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   std::vector<Table*> table_wrap;
   std::vector<Field> field_wrap;
-  std:
   table_wrap.push_back(default_table);
   std::pair<std::unique_ptr<Expression>, RC> left_parse = 
   build_expression(condition.left_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr, nullptr);
@@ -103,6 +104,28 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   return left_parse.second;
   }
 
+  FilterObj left(std::move(left_parse.first));
+  left_attr = left.expression->value_type();
+
+  if (condition.need_sub_query) {
+    Stmt* tmp;
+    rc = SelectStmt::create(db, condition.right_sub_query->selection, tmp);
+    if(left_parse.second != RC::SUCCESS){
+      LOG_WARN("Error when parsing arithmatic expression sql node's right sub_query, error_code = %d.", rc);
+      return rc;
+    }
+    SelectStmt* sub_query_stmt = static_cast<SelectStmt*>(tmp);
+    right_attr = sub_query_stmt->value_type();
+    if (!common::field_type_compare_compatible_table[left_attr][right_attr]) {
+      // 不能比较的两个字段， 要把信息传给客户端
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+  
+    filter_unit = new FilterUnit(left, static_cast<SelectStmt*>(sub_query_stmt));
+    filter_unit->set_comp(comp);
+    return rc;
+  }
+  
   std::pair<std::unique_ptr<Expression>, RC> right_parse = 
   build_expression(condition.right_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr, nullptr);
   if(right_parse.second != RC::SUCCESS){
@@ -111,16 +134,16 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
   
 
-  FilterObj left(std::move(left_parse.first)), right(std::move(right_parse.first));
-  left_attr = left.expression->value_type();
+  FilterObj right(std::move(right_parse.first));
   right_attr = right.expression->value_type();
-  filter_unit = new FilterUnit(left, right);
-  filter_unit->set_comp(comp);
   // 检查两个类型是否能够比较
   if (!common::field_type_compare_compatible_table[left_attr][right_attr]) {
      // 不能比较的两个字段， 要把信息传给客户端
      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
   }
-
+  
+  filter_unit = new FilterUnit(left, right);
+  filter_unit->set_comp(comp);
+  
   return rc;
 }

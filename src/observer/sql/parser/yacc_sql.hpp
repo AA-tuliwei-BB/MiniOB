@@ -102,29 +102,30 @@ extern int yydebug;
     ASC = 303,                     /* ASC  */
     AS = 304,                      /* AS  */
     AND = 305,                     /* AND  */
-    NOT = 306,                     /* NOT  */
-    SET = 307,                     /* SET  */
-    ON = 308,                      /* ON  */
-    LOAD = 309,                    /* LOAD  */
-    DATA = 310,                    /* DATA  */
-    INFILE = 311,                  /* INFILE  */
-    EXPLAIN = 312,                 /* EXPLAIN  */
-    LK = 313,                      /* LK  */
-    EQ = 314,                      /* EQ  */
-    LT = 315,                      /* LT  */
-    GT = 316,                      /* GT  */
-    LE = 317,                      /* LE  */
-    GE = 318,                      /* GE  */
-    NE = 319,                      /* NE  */
-    IS_OP = 320,                   /* IS_OP  */
-    IN_OP = 321,                   /* IN_OP  */
-    EXIST_OP = 322,                /* EXIST_OP  */
-    NUMBER = 323,                  /* NUMBER  */
-    DATE = 324,                    /* DATE  */
-    FLOAT = 325,                   /* FLOAT  */
-    ID = 326,                      /* ID  */
-    SSS = 327,                     /* SSS  */
-    UMINUS = 328                   /* UMINUS  */
+    OR = 306,                      /* OR  */
+    NOT = 307,                     /* NOT  */
+    SET = 308,                     /* SET  */
+    ON = 309,                      /* ON  */
+    LOAD = 310,                    /* LOAD  */
+    DATA = 311,                    /* DATA  */
+    INFILE = 312,                  /* INFILE  */
+    EXPLAIN = 313,                 /* EXPLAIN  */
+    LK = 314,                      /* LK  */
+    EQ = 315,                      /* EQ  */
+    LT = 316,                      /* LT  */
+    GT = 317,                      /* GT  */
+    LE = 318,                      /* LE  */
+    GE = 319,                      /* GE  */
+    NE = 320,                      /* NE  */
+    IS_OP = 321,                   /* IS_OP  */
+    IN_OP = 322,                   /* IN_OP  */
+    EXIST_OP = 323,                /* EXIST_OP  */
+    NUMBER = 324,                  /* NUMBER  */
+    DATE = 325,                    /* DATE  */
+    FLOAT = 326,                   /* FLOAT  */
+    ID = 327,                      /* ID  */
+    SSS = 328,                     /* SSS  */
+    UMINUS = 329                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -133,7 +134,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 136 "yacc_sql.y"
+#line 137 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -156,7 +157,7 @@ union YYSTYPE
   float                             floats;
   bool                              bools;
 
-#line 160 "yacc_sql.hpp"
+#line 161 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
