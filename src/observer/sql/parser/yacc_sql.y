@@ -969,7 +969,8 @@ condition:
       delete $4;
       $$ = new ConditionSqlNode($1, $5, $2);
     }
-    | LBRACE select_stmt RBRACE comp_op LBRACE select_stmt RBRACE {
+    | LBRACE select_stmt RBRACE comp_op LBRACE select_stmt RBRACE 
+    {
       $$ = new ConditionSqlNode($2, $6, $4);
     }
     | exist_op LBRACE select_stmt RBRACE 

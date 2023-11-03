@@ -255,9 +255,9 @@ struct ConditionSqlNode
   bool conjunction_type = false;
   bool left_is_sub_query, right_is_sub_query;
   bool right_is_value_list;
-  ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c), left_is_sub_query(false), right_is_sub_query(false) {}
+  ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c), left_is_sub_query(false), right_is_sub_query(false), right_is_value_list(false) {}
   ConditionSqlNode(ExprSqlNode* l, ParsedSqlNode* r, CompOp c):left_expression(l), right_sub_query(r), comp(c), left_is_sub_query(false), right_is_sub_query(true), right_is_value_list(false) {}
-  ConditionSqlNode(ExprSqlNode* l, std::vector<Value>* r, CompOp c):left_expression(l), comp(c), left_is_sub_query(false), right_is_sub_query(true), right_is_value_list(false) {
+  ConditionSqlNode(ExprSqlNode* l, std::vector<Value>* r, CompOp c):left_expression(l), comp(c), left_is_sub_query(false), right_is_sub_query(false), right_is_value_list(true) {
     value_list.swap(*r);
   }
   ConditionSqlNode(ParsedSqlNode* l, ParsedSqlNode* r, CompOp c):left_sub_query(l), right_sub_query(r), left_is_sub_query(true), right_is_sub_query(true), right_is_value_list(false) {}
