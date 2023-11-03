@@ -160,6 +160,11 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
     if ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
       right->current_tuple()->cell_at(0, right_value);
+      if (right->current_tuple()->cell_num() != 1) {
+        LOG_WARN("sub query don't contain 1 colomn, error=%s", strrc(rc));
+        right->close();
+        return RC::INVALID_ARGUMENT;
+      }
       rc = ComparisonExpr::compare_value_static(left_value, right_value, op, result);
       if (rc != RC::SUCCESS) {
         return rc;
@@ -172,7 +177,7 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
     } else {
       LOG_WARN("fail to reach child tuple in sub query");
       right->close();
-      return rc;
+      return RC::INTERNAL;
     }
   } break;
   }
