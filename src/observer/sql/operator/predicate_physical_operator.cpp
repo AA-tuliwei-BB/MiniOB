@@ -87,11 +87,11 @@ RC PredicatePhysicalOperator::next()
     for (int i = 0, j = 1; i < comp_num; ++i, ++j) {
       bool result;
       if (!both_is_sub_query_[i]) {
-        RC rc = execute_sub_query(sub_query_fields_[comp_num], sub_query_opts_[i], children_[j].get(), tuple, result);
+        RC rc = execute_sub_query(sub_query_fields_[field_pos], sub_query_opts_[i], children_[j].get(), tuple, result);
         if (rc != RC::SUCCESS) {
           return rc;
         }
-        comp_num++;
+        field_pos++;
       } else {
         RC rc = execute_sub_query(children_[j].get(), sub_query_opts_[i], children_[j + 1].get(), tuple, result);
         if (rc != RC::SUCCESS) {
