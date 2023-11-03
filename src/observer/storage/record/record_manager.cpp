@@ -859,6 +859,7 @@ RC RecordFileScanner::open_scan(
   }
   condition_filter_ = condition_filter;
 
+  record_page_iterator_.reset();
   rc = fetch_next_record();
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;

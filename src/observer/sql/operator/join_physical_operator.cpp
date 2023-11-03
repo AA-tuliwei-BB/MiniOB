@@ -103,6 +103,8 @@ RC NestedLoopJoinPhysicalOperator::close()
   bufferred = false;
   left_bufferred = false;
   right_bufferred = false;
+  left_buffer.clear();
+  right_buffer.clear();
 
   return rc;
 }

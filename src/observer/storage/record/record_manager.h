@@ -153,6 +153,8 @@ public:
    */
   bool is_valid() const { return record_page_handler_ != nullptr; }
 
+  void reset() { record_page_handler_ = nullptr; }
+
 private:
   RecordPageHandler *record_page_handler_ = nullptr;
   PageNum            page_num_            = BP_INVALID_PAGE_NUM;
