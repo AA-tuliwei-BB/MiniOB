@@ -12,13 +12,13 @@ RC OrderbyPhysicalOperator::open(Trx *trx)
     return RC::INTERNAL;
   }
 
+  if (parent_tuple_ != nullptr) {
+    children_[0]->set_parent_tuple(get_parent_tuple());
+  }
+
   RC rc = children_[0]->open(trx);
   if (rc != RC::SUCCESS) {
     return rc;
-  }
-
-  if (parent_tuple_ != nullptr) {
-    children_[0]->set_parent_tuple(get_parent_tuple());
   }
 
   emitted_ = false;

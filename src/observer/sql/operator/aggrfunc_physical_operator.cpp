@@ -12,14 +12,13 @@ RC AggrFuncPhysicalOperator::open(Trx *trx)
   }
 
   std::unique_ptr<PhysicalOperator> &child = children_[0];
-  RC                                 rc    = child->open(trx);
+  if (parent_tuple_ != nullptr) {
+    child->set_parent_tuple(get_parent_tuple());
+  }
+  RC rc = child->open(trx);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open child operator: %s", strrc(rc));
     return rc;
-  }
-
-  if (parent_tuple_ != nullptr) {
-    child->set_parent_tuple(get_parent_tuple());
   }
 
   trx_ = trx;
@@ -65,6 +64,9 @@ RC AggrFuncPhysicalOperator::next()
         return rc;
       }
     }
+  }
+  if (rc != RC::RECORD_EOF) {
+    return rc;
   }
   for (auto &it : aggr_list_) {
     it->finish();

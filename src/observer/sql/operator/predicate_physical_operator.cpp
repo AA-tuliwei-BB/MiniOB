@@ -182,6 +182,9 @@ RC PredicatePhysicalOperator::execute_sub_query(PhysicalOperator *left, CompOp &
         break;
       }
     }
+    if (rc != RC::RECORD_EOF) {
+      return rc;
+    }
   } break;
 
   case EXIST:
@@ -265,6 +268,9 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
         }
         break;
       }
+    }
+    if (rc != RC::RECORD_EOF) {
+      return rc;
     }
   } break;
 

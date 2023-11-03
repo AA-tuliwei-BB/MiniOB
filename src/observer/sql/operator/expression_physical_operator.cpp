@@ -25,14 +25,13 @@ RC ExpressionPhysicalOperator::open(Trx *trx)
   }
 
   PhysicalOperator *child = children_[0].get();
+  if (parent_tuple_ != nullptr) {
+    child->set_parent_tuple(get_parent_tuple());
+  }
   RC rc = child->open(trx);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open child operator: %s", strrc(rc));
     return rc;
-  }
-
-  if (parent_tuple_ != nullptr) {
-    child->set_parent_tuple(get_parent_tuple());
   }
 
   constant_over_ = false;
