@@ -40,6 +40,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/expression_physical_operator.h"
 #include "sql/operator/orderby_logical_operator.h"
 #include "sql/operator/orderby_physical_operator.h"
+#include "sql/operator/value_list_logical_operator.h"
+#include "sql/operator/value_list_physical_operator.h"
 #include "sql/expr/expression.h"
 #include "common/log/log.h"
 #include "physical_plan_generator.h"
@@ -97,6 +99,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::ORDERBY: {
       return create_plan(static_cast<OrderbyLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::VALUELIST: {
+      return create_plan(static_cast<ValueListLogicalOperator &>(logical_operator), oper);
     } break;
 
     default: {
@@ -439,4 +445,12 @@ RC PhysicalPlanGenerator::create_plan(OrderbyLogicalOperator &order_oper, std::u
 
   LOG_TRACE("create a orderby physical operator");
   return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(ValueListLogicalOperator &value_oper, std::unique_ptr<PhysicalOperator> &oper)
+{
+  ValueListPhysicalOperator *phy_oper = new ValueListPhysicalOperator(std::move(value_oper.values()));
+  oper = unique_ptr<PhysicalOperator>(phy_oper);
+  LOG_TRACE("create a value list physical operator");
+  return RC::SUCCESS;
 }

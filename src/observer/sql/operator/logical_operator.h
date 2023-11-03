@@ -44,6 +44,7 @@ enum class LogicalOperatorType
   AGGRFUNC,    ///< 聚合函数
   EXPRESSION,  ///< 表达式
   ORDERBY,     ///< 排序
+  VALUELIST,
 };
 
 /**

@@ -45,6 +45,7 @@ enum class PhysicalOperatorType
   PROJECT,
   CALC,
   STRING_LIST,
+  VALUE_LIST,
   DELETE,
   INSERT,
   AGGRFUNC,
