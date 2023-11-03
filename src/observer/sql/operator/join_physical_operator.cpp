@@ -25,6 +25,11 @@ RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
     return RC::INTERNAL;
   }
 
+  left_tuple_ = nullptr;
+  right_tuple_ = nullptr;
+  left_position   = 0;
+  right_position  = 0;
+
   RC rc = RC::SUCCESS;
   left_ = children_[0].get();
   right_ = children_[1].get();
@@ -32,6 +37,10 @@ RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
   round_done_ = true;
 
   if (!bufferred) {
+    left_bufferred  = false;
+    right_bufferred = false;
+    left_buffer.clear();
+    right_buffer.clear();
     left_->open(trx);
     right_->open(trx);
     get_buffer();
@@ -92,19 +101,6 @@ RC NestedLoopJoinPhysicalOperator::close()
       right_closed_ = true;
     }
   }
-
-  left_ = nullptr;
-  right_ = nullptr;
-  left_tuple_ = nullptr;
-  right_tuple_ = nullptr;
-  round_done_ = true;
-  right_closed_ = true;
-
-  bufferred = false;
-  left_bufferred = false;
-  right_bufferred = false;
-  left_buffer.clear();
-  right_buffer.clear();
 
   return rc;
 }

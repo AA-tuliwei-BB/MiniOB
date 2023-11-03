@@ -21,6 +21,7 @@ RC OrderbyPhysicalOperator::open(Trx *trx)
     children_[0]->set_parent_tuple(get_parent_tuple());
   }
 
+  emitted_ = false;
   return RC::SUCCESS;
 }
 

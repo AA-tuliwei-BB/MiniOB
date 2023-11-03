@@ -19,6 +19,11 @@ RC AggrFuncPhysicalOperator::open(Trx *trx)
   }
 
   trx_ = trx;
+
+  emitted_ = false;
+  for (auto &expr : aggr_list_) {
+    expr->reset();
+  }
   return RC::SUCCESS;
 }
 
@@ -76,10 +81,6 @@ RC AggrFuncPhysicalOperator::close()
 {
   if (!children_.empty()) {
     children_[0]->close();
-  }
-  emitted_ = false;
-  for (auto &expr : aggr_list_) {
-    expr->reset();
   }
   return RC::SUCCESS;
 }

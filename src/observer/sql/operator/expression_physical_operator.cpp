@@ -34,6 +34,7 @@ RC ExpressionPhysicalOperator::open(Trx *trx)
     child->set_parent_tuple(get_parent_tuple());
   }
 
+  constant_over_ = false;
   return RC::SUCCESS;
 }
 
@@ -61,7 +62,6 @@ RC ExpressionPhysicalOperator::next()
 
 RC ExpressionPhysicalOperator::close()
 {
-  constant_over_ = false;
   if (!children_.empty()) {
     children_[0]->close();
   }
