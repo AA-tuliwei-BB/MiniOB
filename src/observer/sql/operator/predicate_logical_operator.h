@@ -34,7 +34,7 @@ public:
     return LogicalOperatorType::PREDICATE;
   }
 
-  bool has_sub_query() { return sub_query_fields_.size() != 0; }
+  bool has_sub_query() { return sub_query_opts_.size() != 0; }
 
   std::vector<int8_t> &both_is_sub_query() { return both_is_sub_query_; }
   std::vector<FieldExpr> &sub_query_fields() { return sub_query_fields_; }
