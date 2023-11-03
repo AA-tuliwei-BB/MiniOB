@@ -50,12 +50,25 @@ public:
   FilterUnit(FilterObj &l, FilterObj &r){
     left_ = std::move(l);
     right_ = std::move(r);
-    right_is_sub_query_ = false;
   }
+  
   FilterUnit(FilterObj &l, SelectStmt *r){
     left_ = std::move(l);
-    sub_query = r;
+    right_sub_query_ = r;
     right_is_sub_query_ = true;
+  }
+
+  FilterUnit(SelectStmt *l, SelectStmt *r){
+    left_sub_query_ = l;
+    right_sub_query_ = r;
+    left_is_sub_query_ = true;
+    right_is_sub_query_ = true;
+  }
+  
+  FilterUnit(FilterObj &l, std::vector<Value>& val) {
+    value_list_.swap(val);
+    left_ = std::move(l);
+    right_is_value_list_ = true;
   }
   ~FilterUnit() = default;
 
@@ -86,20 +99,38 @@ public:
   {
     return std::move(right_);
   }
+  SelectStmt* left_query()
+  {
+    return left_sub_query_;
+  }
+  bool left_is_sub_query(){
+    return left_is_sub_query_;
+  }
   SelectStmt* right_query()
   {
-    return sub_query;
+    return right_sub_query_;
   }
   bool right_is_sub_query(){
     return right_is_sub_query_;
+  }
+  std::vector<Value>& value_list()
+  {
+    return value_list_;
+  }
+  bool right_is_value_list(){
+    return right_is_value_list_;
   }
 
 private:
   CompOp comp_ = NO_OP;
   FilterObj left_;
   FilterObj right_;
-  bool right_is_sub_query_;
-  SelectStmt* sub_query;
+  bool left_is_sub_query_ = false;
+  SelectStmt* left_sub_query_;
+  bool right_is_sub_query_ = false;
+  SelectStmt* right_sub_query_;
+  bool right_is_value_list_ = false;
+  std::vector<Value> value_list_;
 };
 
 /**

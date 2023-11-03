@@ -249,11 +249,18 @@ struct ConditionSqlNode
   std::unique_ptr<ExprSqlNode>  left_expression;       ///<条件语句的左表达式          
   CompOp                        comp;                  ///< comparison operator
   std::unique_ptr<ExprSqlNode>  right_expression;      ///< 条件语句的右表达式
-  std::unique_ptr<ParsedSqlNode> right_sub_query;
+  std::unique_ptr<ParsedSqlNode> left_sub_query;       ///< 左选择表达式
+  std::unique_ptr<ParsedSqlNode> right_sub_query;      ///< 右选择表达式
+  std::vector<Value>            value_list;            ///< in的右表达式可能是常量值列表
   bool conjunction_type = false;
-  bool need_sub_query;
-  ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c), need_sub_query(false) {}
-  ConditionSqlNode(ExprSqlNode* l, ParsedSqlNode* r, CompOp c):left_expression(l), right_sub_query(r), comp(c), need_sub_query(true) {}
+  bool left_is_sub_query, right_is_sub_query;
+  bool right_is_value_list;
+  ConditionSqlNode(ExprSqlNode* l, ExprSqlNode* r, CompOp c):left_expression(l), right_expression(r), comp(c), left_is_sub_query(false), right_is_sub_query(false) {}
+  ConditionSqlNode(ExprSqlNode* l, ParsedSqlNode* r, CompOp c):left_expression(l), right_sub_query(r), comp(c), left_is_sub_query(false), right_is_sub_query(true), right_is_value_list(false) {}
+  ConditionSqlNode(ExprSqlNode* l, std::vector<Value>* r, CompOp c):left_expression(l), comp(c), left_is_sub_query(false), right_is_sub_query(true), right_is_value_list(false) {
+    value_list.swap(*r);
+  }
+  ConditionSqlNode(ParsedSqlNode* l, ParsedSqlNode* r, CompOp c):left_sub_query(l), right_sub_query(r), left_is_sub_query(true), right_is_sub_query(true), right_is_value_list(false) {}
   void set_conj(bool conj) { conjunction_type = conj; }
   void reverse_op() {
     switch (comp)

@@ -28,6 +28,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/aggrfunc_logical_operator.h"
 #include "sql/operator/expression_logical_operator.h"
 #include "sql/operator/orderby_logical_operator.h"
+#include "sql/operator/value_list_logical_operator.h"
 
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/calc_stmt.h"
@@ -226,14 +227,40 @@ RC LogicalPlanGenerator::create_plan(
 {
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
+  FilterObj filter_obj_left, filter_obj_right;
+  unique_ptr<Expression> left, right;
   std::vector<FieldExpr> left_expressions_sub_query_comp;
   std::vector<CompOp> compop_sub_query_comp;
-  std::vector<std::unique_ptr<LogicalOperator>> right_querys;
+  std::vector<int8_t> both_is_sub_query;
+  std::vector<std::unique_ptr<LogicalOperator>> sub_querys;
   RC rc;
   for (FilterUnit *filter_unit : filter_units) {
-    FilterObj filter_obj_left = filter_unit->left();
-    unique_ptr<Expression> left(std::move(filter_obj_left.expression));
+    if (filter_unit->left_is_sub_query()) {
+      std::unique_ptr<SelectStmt> left_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
+      std::unique_ptr<LogicalOperator> left_query(nullptr);
+      rc = create_plan(left_stmt.get(), left_query);
+      if(rc != RC::SUCCESS){
+        LOG_WARN("unable to generate right sub query's logical operator, error code = %d", (int)rc);
+        return rc;
+      }
+      sub_querys.push_back(std::move(left_query));
+    } else {
+      filter_obj_left = filter_unit->left();
+      left = std::move(filter_obj_left.expression);
+    }
+    
     if(filter_unit->right_is_sub_query()) {
+      compop_sub_query_comp.push_back(filter_unit->comp());
+      std::unique_ptr<SelectStmt> right_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
+      std::unique_ptr<LogicalOperator> right_query(nullptr);
+      rc = create_plan(right_stmt.get(), right_query);
+      if(rc != RC::SUCCESS){
+        LOG_WARN("unable to generate right sub query's logical operator, error code = %d", (int)rc);
+        return rc;
+      }
+      sub_querys.push_back(std::move(right_query));
+      both_is_sub_query.push_back(filter_unit->left_is_sub_query());
+      if(filter_unit->left_is_sub_query()) continue;
       if (filter_unit->comp() != EXIST && filter_unit->comp() != NOT_EXIST) {
         if(left->type() != ExprType::FIELD) {
         LOG_WARN("left expression should be fieldexpr in condition stmt with sub query");
@@ -245,32 +272,28 @@ RC LogicalPlanGenerator::create_plan(
         left_expressions_sub_query_comp.push_back(Field());
       }
 
-      compop_sub_query_comp.push_back(filter_unit->comp());
-      std::unique_ptr<SelectStmt> right_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
-      std::unique_ptr<LogicalOperator> right_query(nullptr);
-      rc = create_plan(right_stmt.get(), right_query);
-      if(rc != RC::SUCCESS){
-        LOG_WARN("unable to generate right sub query's logical operator, error code = %d", (int)rc);
-        return rc;
-      }
-      right_querys.push_back(std::move(right_query));
-    } else {
+      
+    } else if(!filter_unit->right_is_value_list()){
       FilterObj filter_obj_right = filter_unit->right();
       unique_ptr<Expression> right(std::move(filter_obj_right.expression));
 
       ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
       cmp_exprs.emplace_back(cmp_expr);
+    } else {
+      std::unique_ptr<LogicalOperator> val_list(new ValueListLogicalOperator(filter_unit->value_list()));
+      sub_querys.push_back(std::move(val_list));
+      both_is_sub_query.push_back(filter_unit->left_is_sub_query());
     }
     
   }
 
   unique_ptr<PredicateLogicalOperator> predicate_oper;
-  if (!cmp_exprs.empty() || !right_querys.empty()) {
+  if (!cmp_exprs.empty() || !sub_querys.empty()) {
     unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(filter_stmt->get_conj() ? ConjunctionExpr::Type::OR : ConjunctionExpr::Type::AND, cmp_exprs));
-    if(!right_querys.empty()){
-      predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr), left_expressions_sub_query_comp, compop_sub_query_comp, filter_stmt->get_conj()));
+    if(!sub_querys.empty()){
+      predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr), left_expressions_sub_query_comp, compop_sub_query_comp, both_is_sub_query, filter_stmt->get_conj()));
       predicate_oper->add_child(std::unique_ptr<LogicalOperator>(nullptr));
-      for(auto &sub_query : right_querys) {
+      for(auto &sub_query : sub_querys) {
         predicate_oper->add_child(std::move(sub_query));
       }
     } else {

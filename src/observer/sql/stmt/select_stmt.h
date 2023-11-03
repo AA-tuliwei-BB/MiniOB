@@ -45,6 +45,7 @@ public:
 
 public:
   static RC create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt);
+  static RC create_sub_query(Db* db, SelectSqlNode &select_sql, Stmt* &stmt, std::unordered_map<std::string, Table *>* father_table_map);
 
 public:
   const std::vector<Table *> &tables() const

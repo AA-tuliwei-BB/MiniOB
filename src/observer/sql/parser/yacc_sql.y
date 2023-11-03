@@ -177,6 +177,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <attr_info>           attr_def
 %type <string>              alias_attr
 %type <value_list>          value_list
+%type <value_list>          non_null_value_list
 %type <relation_list>       from
 %type <condition_list>      where
 %type <condition_list>      condition_list
@@ -468,6 +469,18 @@ value_list:
       $$ = nullptr;
     }
     | COMMA value value_list  { 
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<Value>;
+      }
+      $$->emplace_back(*$2);
+      delete $2;
+    }
+    ;
+
+non_null_value_list:
+    COMMA value value_list  { 
       if ($3 != nullptr) {
         $$ = $3;
       } else {
@@ -950,9 +963,18 @@ condition:
       $$ = new ConditionSqlNode($5, $2, $4);
       $$->reverse_op();
     }
+    | complex_expr comp_op LBRACE value non_null_value_list RBRACE
+    {
+      $5->emplace_back(*$4);
+      delete $4;
+      $$ = new ConditionSqlNode($1, $5, $2);
+    }
+    | LBRACE select_stmt RBRACE comp_op LBRACE select_stmt RBRACE {
+      $$ = new ConditionSqlNode($2, $6, $4);
+    }
     | exist_op LBRACE select_stmt RBRACE 
     {
-      $$ = new ConditionSqlNode(nullptr, $3, $1);
+      $$ = new ConditionSqlNode((ExprSqlNode*)nullptr, $3, $1);
     }
     ;
 

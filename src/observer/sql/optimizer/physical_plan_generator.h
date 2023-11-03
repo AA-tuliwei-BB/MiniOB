@@ -32,6 +32,7 @@ class CalcLogicalOperator;
 class AggrFuncLogicalOperator;
 class ExpressionLogicalOperator;
 class OrderbyLogicalOperator;
+class ValueListLogicalOperator;
 
 /**
  * @brief 物理计划生成器

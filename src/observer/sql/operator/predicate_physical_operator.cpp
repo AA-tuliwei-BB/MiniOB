@@ -98,7 +98,7 @@ RC PredicatePhysicalOperator::next()
           return rc;
         }
         ++j;
-      }
+      } 
       if (result && sub_query_connector_ == true) {
         return rc;
       }
