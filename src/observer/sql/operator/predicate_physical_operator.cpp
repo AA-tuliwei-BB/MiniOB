@@ -120,10 +120,7 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
 {
   right->set_parent_tuple(tuple);
   Value left_value;
-  RC rc = left.get_value(*tuple, left_value);
-  if (rc != RC::SUCCESS) {
-    return rc;
-  }
+  RC rc;
   rc = right->open(trx_);
   if (rc != RC::SUCCESS) {
     return rc;
@@ -133,6 +130,10 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
   {
   case IN:
   case NOT_IN: {
+    rc = left.get_value(*tuple, left_value);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
     result = (op == IN) ? false : true;
     while ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
@@ -151,12 +152,16 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
   case EXIST:
   case NOT_EXIST: {
     result = (right->next() == RC::SUCCESS);
-    if (NOT_EXIST) {
+    if (op == NOT_EXIST) {
       result = !result;
     }
   } break;
   
   default: {
+    rc = left.get_value(*tuple, left_value);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
     if ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
       right->current_tuple()->cell_at(0, right_value);
