@@ -55,6 +55,6 @@ private:
   std::vector<FieldExpr> sub_query_fields_;
   std::vector<CompOp> sub_query_opts_;
   // false->and, true -> or;
-  bool sub_query_connector_ = true; // And / Or
+  bool sub_query_connector_ = false; // And / Or
   Trx *trx_ = nullptr;
 };
