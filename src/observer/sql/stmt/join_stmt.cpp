@@ -29,12 +29,12 @@ RC JoinStmt::create(Db *db, JoinSqlNode &join_sql, std::vector<Table*>& tables, 
     tables.push_back(table);
     table_map.insert(std::pair<std::string, Table *>(table_name, table));
     if(!join_sql.join_list[i * 2 + 1].empty()) {
-      if(table_map.find(join_sql.join_list[i * 2 + 1]) == table_map.end()){
+      // if(table_map.find(join_sql.join_list[i * 2 + 1]) == table_map.end()){
         table_map[join_sql.join_list[i * 2 + 1]] = table;
-      } else {
-        LOG_ERROR("name %s refers to multiple table", join_sql.join_list[i * 2].c_str());
-        return RC::INVALID_ARGUMENT;
-      }
+      // } else {
+      //   LOG_ERROR("name %s refers to multiple table", join_sql.join_list[i * 2].c_str());
+      //   return RC::INVALID_ARGUMENT;
+      // }
     }
   }
   FilterStmt *filter_stmt = nullptr;

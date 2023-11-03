@@ -70,12 +70,12 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
     tables.push_back(table);
     table_map.insert(std::pair<std::string, Table *>(table_name, table));
     if(!select_sql.relations[i * 2].empty()) {
-      if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
+      // if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
         table_map[select_sql.relations[i * 2]] = table;
-      } else {
-        LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
-        return RC::INVALID_ARGUMENT;
-      }
+      // } else {
+      //   LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
+      //   return RC::INVALID_ARGUMENT;
+      // }
     }
   }
   std::vector<std::unique_ptr<JoinStmt>> joins;
