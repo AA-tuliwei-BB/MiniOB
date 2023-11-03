@@ -138,6 +138,10 @@ RC PredicatePhysicalOperator::execute_sub_query(PhysicalOperator *left, CompOp &
   Value left_value;
   if ((rc = left->next()) == RC::SUCCESS) {
     left->current_tuple()->cell_at(0, left_value);
+    if (left->current_tuple()->cell_num() > 1) {
+      LOG_ERROR("sub query more than 1 column");
+      return RC::INTERNAL;
+    }
   } else {
     LOG_ERROR("can't not get the value of left sub query");
     left->close();
@@ -165,6 +169,10 @@ RC PredicatePhysicalOperator::execute_sub_query(PhysicalOperator *left, CompOp &
     while ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
       right->current_tuple()->cell_at(0, right_value);
+      if (right->current_tuple()->cell_num() > 1) {
+        LOG_ERROR("sub query more than 1 column");
+        return RC::INTERNAL;
+      }
       if (0 == left_value.compare(right_value)) {
         if (op == IN) {
           result = true;
@@ -245,6 +253,10 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
     while ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
       right->current_tuple()->cell_at(0, right_value);
+      if (right->current_tuple()->cell_num() > 1) {
+        LOG_ERROR("sub query more than 1 column");
+        return RC::INTERNAL;
+      }
       if (0 == left_value.compare(right_value)) {
         if (op == IN) {
           result = true;
