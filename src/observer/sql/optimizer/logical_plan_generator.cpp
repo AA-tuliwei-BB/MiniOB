@@ -236,7 +236,7 @@ RC LogicalPlanGenerator::create_plan(
   RC rc;
   for (FilterUnit *filter_unit : filter_units) {
     if (filter_unit->left_is_sub_query()) {
-      std::unique_ptr<SelectStmt> left_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
+      std::unique_ptr<SelectStmt> left_stmt = std::unique_ptr<SelectStmt>(filter_unit->left_query());
       std::unique_ptr<LogicalOperator> left_query(nullptr);
       rc = create_plan(left_stmt.get(), left_query);
       if(rc != RC::SUCCESS){

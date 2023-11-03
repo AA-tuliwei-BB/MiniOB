@@ -145,6 +145,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   
 
   // create filter statement in `where` statement
+
   FilterStmt *filter_stmt = nullptr;
   rc = FilterStmt::create(db,
       default_table,

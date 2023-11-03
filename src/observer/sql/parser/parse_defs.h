@@ -260,7 +260,7 @@ struct ConditionSqlNode
   ConditionSqlNode(ExprSqlNode* l, std::vector<Value>* r, CompOp c):left_expression(l), comp(c), left_is_sub_query(false), right_is_sub_query(false), right_is_value_list(true) {
     value_list.swap(*r);
   }
-  ConditionSqlNode(ParsedSqlNode* l, ParsedSqlNode* r, CompOp c):left_sub_query(l), right_sub_query(r), left_is_sub_query(true), right_is_sub_query(true), right_is_value_list(false) {}
+  ConditionSqlNode(ParsedSqlNode* l, ParsedSqlNode* r, CompOp c):left_sub_query(l), comp(c), right_sub_query(r), left_is_sub_query(true), right_is_sub_query(true), right_is_value_list(false) {}
   void set_conj(bool conj) { conjunction_type = conj; }
   void reverse_op() {
     switch (comp)
