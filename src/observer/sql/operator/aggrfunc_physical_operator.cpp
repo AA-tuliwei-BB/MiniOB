@@ -4,6 +4,10 @@
 RC AggrFuncPhysicalOperator::open(Trx *trx)
 {
   if (children_.empty()) {
+    emitted_ = false;
+    for (auto &expr : aggr_list_) {
+      expr->reset();
+    }
     return RC::SUCCESS;
   }
 

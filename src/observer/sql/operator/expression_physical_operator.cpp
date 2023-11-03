@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 RC ExpressionPhysicalOperator::open(Trx *trx)
 {
   if (children_.empty()) {
+    constant_over_ = false;
     return RC::SUCCESS;
   }
 
