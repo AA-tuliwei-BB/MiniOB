@@ -88,7 +88,7 @@ RC ExtraRecord::from_record(const Record &record, const TableMeta &table_meta)
     len = data_start_offset() + sizeof(RID);
     int data_max_size = max_size - sizeof(RID);
     for (int i = 0; i < data_len; i += data_max_size) {
-      overflow_data.push_back(OverFlowData(std::min(data_len - i, data_max_size), data + i));
+      overflow_data.emplace_back(std::min(data_len - i, data_max_size), data + i);
     }
     overflow_flag = true;
   } else {
@@ -133,7 +133,7 @@ RC ExtraRecord::to_record(DiskBufferPool *disk_buffer_pool_, const TableMeta *ta
       memcpy(current_positon, overflowdata.data, overflowdata.len);
       current_positon += overflowdata.len;
       next = overflowdata.next;
-      overflow_data.push_back(overflowdata);
+      overflow_data.emplace_back(overflowdata.len, overflowdata.data, &overflowdata.rid);
       data_page_handler.cleanup();
     }
   }
@@ -212,7 +212,7 @@ RC RecordPageHandler::init(DiskBufferPool &buffer_pool, PageNum page_num, const 
   page_header_      = (PageHeader *)(data);
   table_meta_       = table_meta;
 
-  LOG_TRACE("Successfully init page_num %d.", page_num);
+  //LOG_TRACE("Successfully init page_num %d.", page_num);
   return ret;
 }
 
@@ -455,18 +455,17 @@ RC RecordPageHandler::get_record(const RID *rid, ExtraRecord *rec)
     OverFlowData next;
     next.rid = *(reinterpret_cast<RID *>(record_data));
     rec->overflow_data.push_back(next);
-  } else {
-    // 未溢出
-    int now = 0; // 目前是第几个可变长字段
-    rec->data = record_data;
-    rec->data_len = 0;
-    for (const FieldMeta &field : *table_meta_->field_metas()) {
-      if (field.len() == 0) {
-        rec->data_len += rec->length[now];
-        ++now;
-      } else {
-        rec->data_len += field.len();
-      }
+  }
+  // 未溢出
+  int now       = 0;  // 目前是第几个可变长字段
+  rec->data     = record_data;
+  rec->data_len = 0;
+  for (const FieldMeta &field : *table_meta_->field_metas()) {
+    if (field.len() == 0) {
+      rec->data_len += rec->length[now];
+      ++now;
+    } else {
+      rec->data_len += field.len();
     }
   }
   return RC::SUCCESS;
@@ -483,7 +482,7 @@ RC RecordPageHandler::get_data(const RID *rid, OverFlowData *data)
   data->rid  = *rid;
   data->next = *(reinterpret_cast<RID *>(record_data));
   data->len  = *(reinterpret_cast<int *>(record_data + sizeof(RID)));
-  data->data = record_data + sizeof(RID) + sizeof(data->len);
+  data->set_data(record_data + sizeof(RID) + sizeof(data->len), data->len);
   return RC::SUCCESS;
 }
 
@@ -729,17 +728,18 @@ RC RecordFileHandler::insert_record(const Record &record, RID *rid)
   lock_.unlock();  // 如果找到了一个有效的页面，那么此时已经拿到了页面的写锁
 
   // 如果溢出，为每个溢出部分单独分配一个新的页面
+  RecordPageHandler overflow_record_page_handler;
   if (extra.overflow_flag) {
     RID next_rid = *RID::min();
     for (auto it = extra.overflow_data.rbegin(); it != extra.overflow_data.rend(); ++it) {
-      ret = get_new_page(record_page_handler, current_page_num);
+      ret = get_new_page(overflow_record_page_handler, current_page_num);
       if (ret != RC::SUCCESS) {
         // 先不考虑回收的问题
         return ret;
       }
       RID rid;
-      record_page_handler.insert_data(*it, &rid, &next_rid);
-      record_page_handler.cleanup();
+      overflow_record_page_handler.insert_data(*it, &rid, &next_rid);
+      overflow_record_page_handler.cleanup();
       next_rid = rid;
     }
     // insert_record会从over_flow_data[0]中读取next的位置

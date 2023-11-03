@@ -73,11 +73,26 @@ struct OverFlowData
   RID rid;
   RID next;
   int len;
-  const char *data;
-  OverFlowData() {}
+  char *data;
+  OverFlowData() { data = nullptr; }
+  ~OverFlowData() {
+    if (data != nullptr) {
+      free(data);
+      data = nullptr;
+    }
+  }
+  void set_data(const char *data_, int len_) {
+    len = len_;
+    if (data) {
+      free(data);
+    }
+    data = (char*) malloc(len);
+    memcpy(data, data_, len);
+  }
   OverFlowData(int len_, const char *data_, const RID *rid_ = RID::min()) {
     len = len_;
-    data = data_;
+    data = (char*) malloc(len);
+    memcpy(data, data_, len);
     rid = *rid_;
   }
 };

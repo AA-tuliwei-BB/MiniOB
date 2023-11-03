@@ -37,7 +37,7 @@ RC PlainCommunicator::read_event(SessionEvent *&event)
   int data_len = 0;
   int read_len = 0;
 
-  const int max_packet_size = 8192;
+  const int max_packet_size = 81920;
   std::vector<char> buf(max_packet_size);
 
   // 持续接收消息，直到遇到'\0'。将'\0'遇到的后续数据直接丢弃没有处理，因为目前仅支持一收一发的模式
@@ -95,7 +95,7 @@ RC PlainCommunicator::read_event(SessionEvent *&event)
 RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
 {
   SqlResult *sql_result = event->sql_result();
-  const int buf_size = 2048;
+  const int buf_size = 80480;
   char *buf = new char[buf_size];
   const std::string &state_string = sql_result->state_string();
   if (state_string.empty()) {

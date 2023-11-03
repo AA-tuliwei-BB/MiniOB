@@ -23,7 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include "readline/history.h"
 #endif
 
-#define MAX_MEM_BUFFER_SIZE 8192
+#define MAX_MEM_BUFFER_SIZE 81920
 #define PORT_DEFAULT 6789
 
 using namespace common;
@@ -65,6 +65,7 @@ char *my_readline(const char *prompt)
   }
   fprintf(stdout, "%s", prompt);
   char *s = fgets(buffer, MAX_MEM_BUFFER_SIZE, stdin);
+  LOG_ERROR("%d", strlen(s));
   if (nullptr == s) {
     free(buffer);
     if (ferror(stdin) || feof(stdin)) {
