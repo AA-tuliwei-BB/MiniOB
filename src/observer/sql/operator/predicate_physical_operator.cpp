@@ -25,10 +25,11 @@ PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression>
 }
 
 PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression> expr,
-    std::vector<FieldExpr> sub_query_fields, std::vector<CompOp> sub_query_opts, bool connector)
+    std::vector<FieldExpr> sub_query_fields, std::vector<CompOp> sub_query_opts, std::vector<int8_t> both_sub, bool connector)
     : expression_(std::move(expr)),
       sub_query_fields_(sub_query_fields),
       sub_query_opts_(sub_query_opts),
+      both_is_sub_query_(both_sub),
       sub_query_connector_(connector)
 {
   ASSERT(expression_->value_type() == BOOLEANS, "predicate's expression should be BOOLEAN type");
@@ -81,14 +82,22 @@ RC PredicatePhysicalOperator::next()
 
     bool passed = !sub_query_connector_;
     int sub_num = sub_query_fields_.size();
-    for (int i = 0; i < sub_num; ++i) {
+    for (int i = 0, j = 1; i < sub_num; ++i, ++j) {
       if (i + 1 == children_.size()) {
         return RC::INTERNAL;
       }
       bool result;
-      RC rc = execute_sub_query(sub_query_fields_[i], sub_query_opts_[i], children_[i + 1].get(), tuple, result);
-      if (rc != RC::SUCCESS) {
-        return rc;
+      if (!both_is_sub_query_[i]) {
+        RC rc = execute_sub_query(sub_query_fields_[i], sub_query_opts_[i], children_[j].get(), tuple, result);
+        if (rc != RC::SUCCESS) {
+          return rc;
+        }
+      } else {
+        RC rc = execute_sub_query(children_[j].get(), sub_query_opts_[i], children_[j + 1].get(), tuple, result);
+        if (rc != RC::SUCCESS) {
+          return rc;
+        }
+        ++j;
       }
       if (result && sub_query_connector_ == true) {
         return rc;
@@ -115,6 +124,104 @@ Tuple *PredicatePhysicalOperator::current_tuple()
 {
   return children_[0]->current_tuple();
 }
+
+RC PredicatePhysicalOperator::execute_sub_query(PhysicalOperator *left, CompOp &op, PhysicalOperator *right, Tuple *tuple, bool &result)
+{
+  right->set_parent_tuple(tuple);
+  left->set_parent_tuple(tuple);
+
+  RC rc = left->open(trx_);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+
+  Value left_value;
+  if ((rc = left->next()) == RC::SUCCESS) {
+    left->current_tuple()->cell_at(0, left_value);
+  } else {
+    LOG_ERROR("can't not get the value of left sub query");
+    left->close();
+    return RC::INTERNAL;
+  }
+  if ((rc = left->next()) == RC::SUCCESS) {
+    LOG_ERROR("left sub query is more than 1 row");
+    left->close();
+    return RC::INTERNAL;
+  }
+
+  rc = right->open(trx_);
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+
+  switch (op)
+  {
+  case IN:
+  case NOT_IN: {
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+    result = (op == IN) ? false : true;
+    while ((rc = right->next()) == RC::SUCCESS) {
+      Value right_value;
+      right->current_tuple()->cell_at(0, right_value);
+      if (0 == left_value.compare(right_value)) {
+        if (op == IN) {
+          result = true;
+        } else {
+          result = false;
+        }
+        break;
+      }
+    }
+  } break;
+
+  case EXIST:
+  case NOT_EXIST: {
+    LOG_ERROR("EXIST/NOT EXIST connect two sub query");
+    return RC::INTERNAL;
+  } break;
+  
+  default: {
+    if ((rc = right->next()) == RC::SUCCESS) {
+      Value right_value;
+      right->current_tuple()->cell_at(0, right_value);
+      if (right->current_tuple()->cell_num() != 1) {
+        LOG_WARN("sub query don't contain 1 colomn, error=%s", strrc(rc));
+        left->close();
+        right->close();
+        return RC::INVALID_ARGUMENT;
+      }
+      rc = ComparisonExpr::compare_value_static(left_value, right_value, op, result);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+      if((rc = right->next()) != RC::RECORD_EOF) {
+        LOG_WARN("more than 1 child tuple in sub query or error in sub query, error=%s", strrc(rc));
+        left->close();
+        right->close();
+        return RC::INVALID_ARGUMENT;
+      }
+    } else {
+      LOG_WARN("fail to reach child tuple in sub query");
+      left->close();
+      right->close();
+      return RC::INTERNAL;
+    }
+  } break;
+  }
+
+  rc = left->close();
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+  rc = right->close();
+  if (rc != RC::SUCCESS) {
+    return rc;
+  }
+  return RC::SUCCESS;
+}
+
 
 RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, PhysicalOperator *right, Tuple *tuple, bool &result)
 {

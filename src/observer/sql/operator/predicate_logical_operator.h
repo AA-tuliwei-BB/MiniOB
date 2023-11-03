@@ -26,7 +26,7 @@ class PredicateLogicalOperator : public LogicalOperator
 public:
   PredicateLogicalOperator(std::unique_ptr<Expression> expression);
   PredicateLogicalOperator(std::unique_ptr<Expression> expr, std::vector<FieldExpr> &sub_query_fields,
-      std::vector<CompOp> &sub_query_opts, bool connector);
+      std::vector<CompOp> &sub_query_opts, std::vector<int8_t> both_sub, bool connector);
   virtual ~PredicateLogicalOperator() = default;
 
   LogicalOperatorType type() const override
@@ -36,6 +36,7 @@ public:
 
   bool has_sub_query() { return sub_query_fields_.size() != 0; }
 
+  std::vector<int8_t> &both_is_sub_query() { return both_is_sub_query_; }
   std::vector<FieldExpr> &sub_query_fields() { return sub_query_fields_; }
   std::vector<CompOp> &sub_query_opts() { return sub_query_opts_; }
   bool sub_query_connector() { return sub_query_connector_; }
@@ -45,6 +46,7 @@ public:
     } else children_[0] = std::move(table_get_oper);
   }
 private:
+  std::vector<int8_t> both_is_sub_query_;
   std::vector<FieldExpr> sub_query_fields_;
   std::vector<CompOp> sub_query_opts_;
   // false->and, true->or;

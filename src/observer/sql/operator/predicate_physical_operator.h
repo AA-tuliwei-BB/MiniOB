@@ -30,7 +30,7 @@ public:
   PredicatePhysicalOperator(std::unique_ptr<Expression> expr);
 
   PredicatePhysicalOperator(std::unique_ptr<Expression> expr, std::vector<FieldExpr> sub_query_fields,
-      std::vector<CompOp> sub_query_opts, bool connector);
+      std::vector<CompOp> sub_query_opts, std::vector<int8_t> both_sub, bool connector);
 
   virtual ~PredicatePhysicalOperator() = default;
 
@@ -47,9 +47,11 @@ public:
 
 private:
   RC execute_sub_query(FieldExpr &left, CompOp &op, PhysicalOperator *right, Tuple *tuple, bool &result);
+  RC execute_sub_query(PhysicalOperator *left, CompOp &op, PhysicalOperator *right, Tuple *tuple, bool &result);
 
 private:
   std::unique_ptr<Expression> expression_;
+  std::vector<int8_t> both_is_sub_query_;
   std::vector<FieldExpr> sub_query_fields_;
   std::vector<CompOp> sub_query_opts_;
   // false->and, true -> or;

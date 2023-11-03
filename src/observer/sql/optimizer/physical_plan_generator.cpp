@@ -199,6 +199,7 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
     oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression),
         pred_oper.sub_query_fields(),
         pred_oper.sub_query_opts(),
+        pred_oper.both_is_sub_query(),
         pred_oper.sub_query_connector()));
   } else {
     oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
