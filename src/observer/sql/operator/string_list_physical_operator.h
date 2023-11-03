@@ -54,6 +54,7 @@ public:
 
   RC open(Trx *) override
   {
+    iterator_ = strings_.begin();
     return RC::SUCCESS;
   }
 

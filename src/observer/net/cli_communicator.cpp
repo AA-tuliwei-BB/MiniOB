@@ -65,7 +65,6 @@ char *my_readline(const char *prompt)
   }
   fprintf(stdout, "%s", prompt);
   char *s = fgets(buffer, MAX_MEM_BUFFER_SIZE, stdin);
-  LOG_ERROR("%d", strlen(s));
   if (nullptr == s) {
     free(buffer);
     if (ferror(stdin) || feof(stdin)) {

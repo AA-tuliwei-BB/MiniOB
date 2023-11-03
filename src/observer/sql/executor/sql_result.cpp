@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "session/session.h"
 #include "storage/trx/trx.h"
 #include "common/log/log.h"
+#include "sql_result.h"
 
 SqlResult::SqlResult(Session *session) : session_(session)
 {}
@@ -60,6 +61,18 @@ RC SqlResult::close()
     }
   }
   return rc;
+}
+
+RC SqlResult::open_operator()
+{
+  Trx *trx = session_->current_trx();
+  trx->start_if_need();
+  return operator_->open(trx);
+}
+
+RC SqlResult::close_operator()
+{
+  return operator_->close();
 }
 
 RC SqlResult::next_tuple(Tuple *&tuple)

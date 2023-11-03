@@ -67,6 +67,8 @@ public:
 
   RC open();
   RC close();
+  RC open_operator();
+  RC close_operator();
   RC next_tuple(Tuple *&tuple);
 
 private:
