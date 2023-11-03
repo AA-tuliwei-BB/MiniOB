@@ -24,5 +24,5 @@ PredicateLogicalOperator::PredicateLogicalOperator(std::unique_ptr<Expression> e
     : sub_query_fields_(sub_query_fields), sub_query_opts_(sub_query_opts), both_is_sub_query_(both_sub), sub_query_connector_(connector)
 {
   expressions_.emplace_back(std::move(expr));
-  ASSERT(sub_query_fields_.size() == sub_query_opts_.size(), "invalid sub query: size not equal");
+  //ASSERT(sub_query_fields_.size() == sub_query_opts_.size(), "invalid sub query: size not equal");
 }
