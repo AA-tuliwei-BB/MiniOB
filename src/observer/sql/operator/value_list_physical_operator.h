@@ -26,13 +26,16 @@ public:
 
   RC open(Trx *) override
   {
-    iterator_ = list_.begin();
+    started_ = false;
     return RC::SUCCESS;
   }
 
   RC next() override
   {
-    if (iterator_ != list_.end()) {
+    if (!started_) {
+      started_ = true;
+      iterator_ = list_.begin();
+    } else if (iterator_ != list_.end()) {
       ++iterator_;
     }
     return iterator_ == list_.end() ? RC::RECORD_EOF : RC::SUCCESS;
