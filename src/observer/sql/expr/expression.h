@@ -401,6 +401,7 @@ public:
   AttrType value_type() const override;
   bool is_attr() const { return false; }
 
+  void reset() { finished = false, count_ = 0;}
   void finish() { finished = true; };
   RC add_value(const Tuple &tuple);
   RC get_value(Value &value) const;

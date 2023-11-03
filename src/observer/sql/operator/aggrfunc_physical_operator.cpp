@@ -32,7 +32,10 @@ RC AggrFuncPhysicalOperator::next()
   emitted_ = true;
 
   if (children_.empty()) {
-    return RC::INTERNAL;
+    for (auto &it : aggr_list_) {
+      it->finish();
+    }
+    return RC::SUCCESS;
   }
 
   PhysicalOperator *child = children_[0].get();
@@ -75,5 +78,8 @@ RC AggrFuncPhysicalOperator::close()
     children_[0]->close();
   }
   emitted_ = false;
+  for (auto &expr : aggr_list_) {
+    expr->reset();
+  }
   return RC::SUCCESS;
 }
