@@ -53,4 +53,5 @@ private:
   std::vector<std::unique_ptr<Expression>> expressions_;
   ExpressionTuple tuple_;
   bool is_constant_;
+  bool constant_over_ = false;
 };

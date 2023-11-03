@@ -41,8 +41,12 @@ RC ExpressionPhysicalOperator::next()
 {
   if (children_.empty()) {
     if(is_constant_) {
-      is_constant_ = false;
-      return RC::SUCCESS;
+      if (!constant_over_) {
+        constant_over_ = true;
+        return RC::SUCCESS;
+      } else {
+        return RC::RECORD_EOF;
+      }
     }
     return RC::RECORD_EOF;
   }
@@ -57,6 +61,7 @@ RC ExpressionPhysicalOperator::next()
 
 RC ExpressionPhysicalOperator::close()
 {
+  constant_over_ = false;
   if (!children_.empty()) {
     children_[0]->close();
   }
