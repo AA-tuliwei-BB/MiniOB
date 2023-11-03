@@ -157,15 +157,22 @@ RC PredicatePhysicalOperator::execute_sub_query(FieldExpr &left, CompOp &op, Phy
   } break;
   
   default: {
-    if ((rc = right->next()) != RC::SUCCESS) {
-      result = false;
-    } else {
+    if ((rc = right->next()) == RC::SUCCESS) {
       Value right_value;
       right->current_tuple()->cell_at(0, right_value);
       rc = ComparisonExpr::compare_value_static(left_value, right_value, op, result);
       if (rc != RC::SUCCESS) {
         return rc;
       }
+      if((rc = right->next()) != RC::RECORD_EOF) {
+        LOG_WARN("more than 1 child tuple in sub query or error in sub query, error=%s", strrc(rc));
+        right->close();
+        return RC::INVALID_ARGUMENT;
+      }
+    } else {
+      LOG_WARN("fail to reach child tuple in sub query");
+      right->close();
+      return rc;
     }
   } break;
   }

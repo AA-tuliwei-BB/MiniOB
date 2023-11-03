@@ -171,6 +171,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <value>               value_in_expr
 %type <number>              number
 %type <comp>                comp_op
+%type <comp>                exist_op
 %type <attr_infos>          attr_def_list
 %type <number>              null_def
 %type <attr_info>           attr_def
@@ -949,10 +950,15 @@ condition:
       $$ = new ConditionSqlNode($5, $2, $4);
       $$->reverse_op();
     }
-    | EXIST_OP LBRACE select_stmt RBRACE 
+    | exist_op LBRACE select_stmt RBRACE 
     {
-      
+      $$ = new ConditionSqlNode(nullptr, $3, $1);
     }
+    ;
+
+exist_op:
+    EXIST_OP { $$ = EXIST;  }
+    | NOT EXIST_OP { $$ = NOT_EXIST;  }
     ;
 
 comp_op:

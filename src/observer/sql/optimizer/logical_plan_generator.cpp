@@ -234,14 +234,18 @@ RC LogicalPlanGenerator::create_plan(
     FilterObj filter_obj_left = filter_unit->left();
     unique_ptr<Expression> left(std::move(filter_obj_left.expression));
     if(filter_unit->right_is_sub_query()) {
-      if(left->type() != ExprType::FIELD){
+      if (filter_unit->comp() != EXIST && filter_unit->comp() != NOT_EXIST) {
+        if(left->type() != ExprType::FIELD) {
         LOG_WARN("left expression should be fieldexpr in condition stmt with sub query");
         return RC::INVALID_ARGUMENT;
+        }
+        FieldExpr* left_field = static_cast<FieldExpr*>(left.get());
+        left_expressions_sub_query_comp.push_back(FieldExpr(left_field->field()));
+      } else {
+        left_expressions_sub_query_comp.push_back(Field());
       }
-      FieldExpr* left_field = static_cast<FieldExpr*>(left.get());
-      left_expressions_sub_query_comp.push_back(FieldExpr(left_field->field()));
-      compop_sub_query_comp.push_back(filter_unit->comp());
 
+      compop_sub_query_comp.push_back(filter_unit->comp());
       std::unique_ptr<SelectStmt> right_stmt = std::unique_ptr<SelectStmt>(filter_unit->right_query());
       std::unique_ptr<LogicalOperator> right_query(nullptr);
       rc = create_plan(right_stmt.get(), right_query);

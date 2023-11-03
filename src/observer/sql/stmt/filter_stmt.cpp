@@ -97,6 +97,24 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   std::vector<Table*> table_wrap;
   std::vector<Field> field_wrap;
   table_wrap.push_back(default_table);
+  if (comp == EXIST || comp == NOT_EXIST) {
+    Stmt* tmp;
+    if(!condition.need_sub_query) {
+      LOG_ERROR("Exist operator needs a sub query");
+      return RC::INVALID_ARGUMENT;
+    }
+    rc = SelectStmt::create(db, condition.right_sub_query->selection, tmp);
+    if(rc != RC::SUCCESS){
+      LOG_WARN("Error when parsing arithmatic expression sql node's right sub_query, error_code = %d.", rc);
+      return rc;
+    }
+    SelectStmt* sub_query_stmt = static_cast<SelectStmt*>(tmp);
+    
+    FilterObj left;
+    filter_unit = new FilterUnit(left, static_cast<SelectStmt*>(sub_query_stmt));
+    filter_unit->set_comp(comp);
+    return rc;
+  }
   std::pair<std::unique_ptr<Expression>, RC> left_parse = 
   build_expression(condition.left_expression.get(), table_wrap, *tables, field_wrap, db->name(), nullptr, nullptr);
   if(left_parse.second != RC::SUCCESS){
@@ -110,7 +128,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   if (condition.need_sub_query) {
     Stmt* tmp;
     rc = SelectStmt::create(db, condition.right_sub_query->selection, tmp);
-    if(left_parse.second != RC::SUCCESS){
+    if(rc != RC::SUCCESS){
       LOG_WARN("Error when parsing arithmatic expression sql node's right sub_query, error_code = %d.", rc);
       return rc;
     }
