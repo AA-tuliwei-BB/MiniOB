@@ -74,5 +74,6 @@ RC AggrFuncPhysicalOperator::close()
   if (!children_.empty()) {
     children_[0]->close();
   }
+  emitted_ = false;
   return RC::SUCCESS;
 }
