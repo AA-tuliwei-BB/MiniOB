@@ -311,7 +311,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
       if(build_result.first->type() != ExprType::AGGRFUNC) {
         AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
         having_left.push_back(tmp);
-      } else having_left.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+      } else having_left.push_back(static_cast<AggrFuncExpr*>(build_result.first.release()));
 
       build_result = build_expression(it->right_expression.get(), tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
       if(build_result.second != RC::SUCCESS){
@@ -321,7 +321,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
       if(build_result.first->type() != ExprType::AGGRFUNC) {
         AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
         having_right.push_back(tmp);
-      } else having_right.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+      } else having_right.push_back(static_cast<AggrFuncExpr*>(build_result.first.release()));
     }
   }
   // everything alright
