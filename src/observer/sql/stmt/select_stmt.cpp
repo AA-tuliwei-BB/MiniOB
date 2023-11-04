@@ -148,7 +148,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
         ExprType expressionType = build_result.first->type();
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
-        query_fields_size.push_back(query_fields.size());
+        query_fields_size.push_back(j + 1);
       }
     }else {
       std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
