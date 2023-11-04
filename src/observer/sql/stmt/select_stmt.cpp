@@ -122,7 +122,6 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
         if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
         {
           RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
-          field_name.push_back(rel.attribute_name);
           if(rel.relation_name.empty()) {
             for (Table *table : tables) {
               wildcard_fields(table, query_fields);
@@ -131,19 +130,19 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
             if(table_map.find(rel.relation_name) != table_map.end()) {
               Table* cur_table = table_map[rel.relation_name];
               wildcard_fields(cur_table, query_fields);
+
             } else {
               LOG_WARN("unable to find table %s", rel.relation_name);
               return RC::SCHEMA_TABLE_NOT_EXIST;
             }
           }
         } else {
-          for (Table *table : tables) {
-            wildcard_fields(table, query_fields);
-          }
-          field_name.push_back(cur.name);
+          LOG_WARN("star expression should be on the top");
+          return RC::INVALID_ARGUMENT;
         }
         int cur_query_field = query_fields.size();
         for(int j = last_query_field; j < cur_query_field; ++j){
+          field_name.push_back(query_fields[j].field_name());
           std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j], &aggr_list);
           if(build_result.second != RC::SUCCESS){
             LOG_WARN("fail to build expression. error code = %d.", build_result.second);
