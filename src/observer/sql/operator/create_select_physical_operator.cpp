@@ -31,43 +31,45 @@ RC CreateSelectPhysicalOperator::open(Trx *trx)
 
 RC CreateSelectPhysicalOperator::next()
 {
-  // get next from select
-  RC rc = children_[0]->next();
-  if (rc != RC::SUCCESS && rc != RC::RECORD_EOF) {
-    // drop table if fail
-    db_->drop_table(table_->table_meta().name());
-    table_ = nullptr;
-    return RC::INTERNAL;
-  }
-  if (rc == RC::RECORD_EOF) {
-    return rc;
-  }
+  RC rc = RC::SUCCESS;
+  while ((rc = children_[0]->next()) == RC::SUCCESS) {
+    // get next from select
+    if (rc != RC::SUCCESS && rc != RC::RECORD_EOF) {
+      // drop table if fail
+      db_->drop_table(table_->table_meta().name());
+      table_ = nullptr;
+      return RC::INTERNAL;
+    }
+    if (rc == RC::RECORD_EOF) {
+      return rc;
+    }
 
-  // get vector
-  Tuple *tuple = children_[0]->current_tuple();
-  std::vector<Value> values;
-  int cell_num = tuple->cell_num();
-  values.resize(cell_num);
-  for (int i = 0; i < cell_num; ++i) {
-    rc = tuple->cell_at(i, values[i]);
+    // get vector
+    Tuple             *tuple = children_[0]->current_tuple();
+    std::vector<Value> values;
+    int                cell_num = tuple->cell_num();
+    values.resize(cell_num);
+    for (int i = 0; i < cell_num; ++i) {
+      rc = tuple->cell_at(i, values[i]);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+    }
+
+    // make record and insert it
+    Record record;
+    rc = table_->make_record(static_cast<int>(values.size()), values.data(), record);
     if (rc != RC::SUCCESS) {
+      LOG_ERROR("failed to make record. rc=%s", strrc(rc));
+      return rc;
+    }
+    rc = trx_->insert_record(table_, record);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to insert record by transaction. rc=%s", strrc(rc));
       return rc;
     }
   }
-
-  // make record and insert it
-  Record record;
-  rc = table_->make_record(static_cast<int>(values.size()), values.data(), record);
-  if (rc != RC::SUCCESS) {
-    LOG_ERROR("failed to make record. rc=%s", strrc(rc));
-    return rc;
-  }
-  rc = trx_->insert_record(table_, record);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to insert record by transaction. rc=%s", strrc(rc));
-    return rc;
-  }
-  return RC::SUCCESS;
+  return rc;
 }
 
 RC CreateSelectPhysicalOperator::close()
