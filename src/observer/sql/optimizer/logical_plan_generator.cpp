@@ -29,6 +29,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/expression_logical_operator.h"
 #include "sql/operator/orderby_logical_operator.h"
 #include "sql/operator/value_list_logical_operator.h"
+#include "sql/operator/create_select_logical_operator.h"
 
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/calc_stmt.h"
@@ -38,6 +39,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/explain_stmt.h"
 #include "sql/stmt/update_stmt.h"
+#include "sql/stmt/create_select_stmt.h"
+#include "logical_plan_generator.h"
 
 using namespace std;
 
@@ -74,6 +77,12 @@ RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical
       ExplainStmt *explain_stmt = static_cast<ExplainStmt *>(stmt);
       rc = create_plan(explain_stmt, logical_operator);
     } break;
+
+    case StmtType::CREATE_SELECT: {
+      CreateSelectStmt *create_select_stmt = static_cast<CreateSelectStmt *>(stmt);
+      rc = create_plan(create_select_stmt, logical_operator);
+    } break;
+
     default: {
       rc = RC::UNIMPLENMENT;
     }
@@ -400,8 +409,23 @@ RC LogicalPlanGenerator::create_plan(
   return rc;
 }
 
-RC LogicalPlanGenerator::create_plan(
-    ExplainStmt *explain_stmt, unique_ptr<LogicalOperator> &logical_operator)
+RC LogicalPlanGenerator::create_plan(CreateSelectStmt *create_select_stmt, std::unique_ptr<LogicalOperator> &logical_operator)
+{
+  Stmt *select_stmt = create_select_stmt->select_stmt();
+  unique_ptr<LogicalOperator> select_oper;
+  RC rc = create(select_stmt, select_oper);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to create explain's child operator. rc=%s", strrc(rc));
+    return rc;
+  }
+
+  logical_operator = unique_ptr<LogicalOperator>(
+      new CreateSelectLogicalOperator(create_select_stmt->create_table_stmt(), create_select_stmt->db()));
+  logical_operator->add_child(std::move(select_oper));
+  return rc;
+}
+
+RC LogicalPlanGenerator::create_plan(ExplainStmt *explain_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
   Stmt *child_stmt = explain_stmt->child();
   unique_ptr<LogicalOperator> child_oper;

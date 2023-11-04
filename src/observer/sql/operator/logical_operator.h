@@ -45,6 +45,7 @@ enum class LogicalOperatorType
   EXPRESSION,  ///< 表达式
   ORDERBY,     ///< 排序
   VALUELIST,
+  CREATE_SELECT,
 };
 
 /**

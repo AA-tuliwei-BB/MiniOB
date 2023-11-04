@@ -42,6 +42,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/orderby_physical_operator.h"
 #include "sql/operator/value_list_logical_operator.h"
 #include "sql/operator/value_list_physical_operator.h"
+#include "sql/operator/create_select_logical_operator.h"
+#include "sql/operator/create_select_physical_operator.h"
 #include "sql/expr/expression.h"
 #include "common/log/log.h"
 #include "physical_plan_generator.h"
@@ -103,6 +105,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::VALUELIST: {
       return create_plan(static_cast<ValueListLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::CREATE_SELECT: {
+      return create_plan(static_cast<CreateSelectLogicalOperator &>(logical_operator), oper);
     } break;
 
     default: {
@@ -453,4 +459,34 @@ RC PhysicalPlanGenerator::create_plan(ValueListLogicalOperator &value_oper, std:
   oper = unique_ptr<PhysicalOperator>(phy_oper);
   LOG_TRACE("create a value list physical operator");
   return RC::SUCCESS;
+}
+
+RC PhysicalPlanGenerator::create_plan(
+    CreateSelectLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper)
+{
+  vector<unique_ptr<LogicalOperator>> &child_opers = logical_oper.children();
+
+  unique_ptr<PhysicalOperator> child_phy_oper;
+
+  RC rc = RC::SUCCESS;
+  if (!child_opers.empty()) {
+    LogicalOperator *child_oper = child_opers.front().get();
+    rc = create(*child_oper, child_phy_oper);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create create-select logical operator's child physical operator. rc=%s", strrc(rc));
+      return rc;
+    }
+  }
+
+  CreateSelectPhysicalOperator *create_select_operator =
+      new CreateSelectPhysicalOperator(logical_oper.create_table_stmt(), logical_oper.db());
+
+  if (child_phy_oper) {
+    create_select_operator->add_child(std::move(child_phy_oper));
+  }
+
+  oper = unique_ptr<PhysicalOperator>(create_select_operator);
+
+  LOG_TRACE("create a create-select physical operator");
+  return rc;
 }

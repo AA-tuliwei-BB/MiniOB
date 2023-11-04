@@ -51,6 +51,7 @@ enum class PhysicalOperatorType
   AGGRFUNC,
   EXPRESSION,
   ORDERBY,
+  CREATE_SELECT,
 };
 
 /**
