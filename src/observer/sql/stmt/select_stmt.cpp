@@ -165,7 +165,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
         
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
-        query_fields_size.push_back(j + 1);
+        query_fields_size.push_back(query_fields.size());
       }
       
     }

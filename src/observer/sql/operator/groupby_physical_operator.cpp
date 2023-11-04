@@ -147,7 +147,7 @@ RC GroupbyPhysicalOperator::check_same(Tuple *tuple, bool &result)
     }
     if (value.compare(last_values[i]) != 0) {
       result = false;
-      break;
+      return rc;
     }
   }
   result = true;
