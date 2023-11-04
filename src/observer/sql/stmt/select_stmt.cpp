@@ -106,71 +106,140 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   std::vector<AggrFuncExpr*> aggr_list;
   std::vector<std::string> alias;
   bool is_aggregate = (select_sql.expressions.size() != 0) ? select_sql.expressions[0]->is_aggregate : false;
-  for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
-    ExprSqlNode &cur = *select_sql.expressions[i];
-    if(cur.is_aggregate ^ is_aggregate){
-      LOG_WARN("mixed aggregate expression and non-aggregate type in one select statement.");
-      return RC::INVALID_ARGUMENT;
-    }
-    if(cur.need_extract){
-      if(cur.have_alias) {
-        LOG_WARN("star expression shouldn't have alias");
+  if(select_sql.group_by_fields.empty()) {
+    for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
+      ExprSqlNode &cur = *select_sql.expressions[i];
+      if(cur.is_aggregate ^ is_aggregate){
+        LOG_WARN("mixed aggregate expression and non-aggregate type in one select statement.");
         return RC::INVALID_ARGUMENT;
       }
-      int last_query_field = query_fields.size();
-      if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
-      {
-        RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
-        if(rel.relation_name.empty()) {
-          for (Table *table : tables) {
-            wildcard_fields(table, query_fields);
-          }
-        } else {
-          if(table_map.find(rel.relation_name) != table_map.end()) {
-            Table* cur_table = table_map[rel.relation_name];
-            wildcard_fields(cur_table, query_fields);
-          } else {
-            LOG_WARN("unable to find table %s", rel.relation_name);
-            return RC::SCHEMA_TABLE_NOT_EXIST;
-          }
+      if(cur.need_extract){
+        if(cur.have_alias) {
+          LOG_WARN("star expression shouldn't have alias");
+          return RC::INVALID_ARGUMENT;
         }
-      } else for (Table *table : tables) {
-        wildcard_fields(table, query_fields);
-      }
-      int cur_query_field = query_fields.size();
-      for(int j = last_query_field; j < cur_query_field; ++j){
-        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j], &aggr_list);
+        int last_query_field = query_fields.size();
+        if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
+        {
+          RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
+          if(rel.relation_name.empty()) {
+            for (Table *table : tables) {
+              wildcard_fields(table, query_fields);
+            }
+          } else {
+            if(table_map.find(rel.relation_name) != table_map.end()) {
+              Table* cur_table = table_map[rel.relation_name];
+              wildcard_fields(cur_table, query_fields);
+            } else {
+              LOG_WARN("unable to find table %s", rel.relation_name);
+              return RC::SCHEMA_TABLE_NOT_EXIST;
+            }
+          }
+        } else for (Table *table : tables) {
+          wildcard_fields(table, query_fields);
+        }
+        int cur_query_field = query_fields.size();
+        for(int j = last_query_field; j < cur_query_field; ++j){
+          std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j], &aggr_list);
+          if(build_result.second != RC::SUCCESS){
+            LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+            return build_result.second;
+          }
+          
+          ExprType expressionType = build_result.first->type();
+          alias.push_back(cur.name);
+          expressions.push_back(std::move(build_result.first));
+          query_fields_size.push_back(j + 1);
+        }
+      } else {
+        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
         if(build_result.second != RC::SUCCESS){
           LOG_WARN("fail to build expression. error code = %d.", build_result.second);
           return build_result.second;
         }
-        
         ExprType expressionType = build_result.first->type();
+        if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC && expressionType != ExprType::ARITHMETIC && expressionType != ExprType::VALUE){
+          LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+          return RC::INVALID_ARGUMENT;
+        }
+        
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
         query_fields_size.push_back(j + 1);
       }
-    }else {
-      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
-      if(build_result.second != RC::SUCCESS){
-        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
-        return build_result.second;
-      }
-      ExprType expressionType = build_result.first->type();
-      if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC && expressionType != ExprType::ARITHMETIC && expressionType != ExprType::VALUE){
-        LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
-        return RC::INVALID_ARGUMENT;
-      }
       
-      alias.push_back(cur.name);
-      expressions.push_back(std::move(build_result.first));
-      query_fields_size.push_back(query_fields.size());
     }
-    
+
+    LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
+  } else {
+    for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
+      ExprSqlNode &cur = *select_sql.expressions[i];
+      if(cur.need_extract){
+        if(cur.have_alias) {
+          LOG_WARN("star expression shouldn't have alias");
+          return RC::INVALID_ARGUMENT;
+        }
+        int last_query_field = query_fields.size();
+        if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
+        {
+          RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
+          if(rel.relation_name.empty()) {
+            for (Table *table : tables) {
+              wildcard_fields(table, query_fields);
+            }
+          } else {
+            if(table_map.find(rel.relation_name) != table_map.end()) {
+              Table* cur_table = table_map[rel.relation_name];
+              wildcard_fields(cur_table, query_fields);
+            } else {
+              LOG_WARN("unable to find table %s", rel.relation_name);
+              return RC::SCHEMA_TABLE_NOT_EXIST;
+            }
+          }
+        } else for (Table *table : tables) {
+          wildcard_fields(table, query_fields);
+        }
+        int cur_query_field = query_fields.size();
+        for(int j = last_query_field; j < cur_query_field; ++j){
+          std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), &query_fields[j], nullptr);
+          if(build_result.second != RC::SUCCESS){
+            LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+            return build_result.second;
+          }
+          
+          if(build_result.first->type() != ExprType::AGGRFUNC) {
+            AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
+            aggr_list.push_back(tmp);
+          } else aggr_list.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+          ExprType expressionType = build_result.first->type();
+          alias.push_back(cur.name);
+          expressions.push_back(std::move(build_result.first));
+          query_fields_size.push_back(j + 1);
+        }
+      }  else {
+        std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
+        if(build_result.second != RC::SUCCESS){
+          LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+          return build_result.second;
+        }
+        ExprType expressionType = build_result.first->type();
+        
+        if(build_result.first->type() != ExprType::AGGRFUNC) {
+            AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
+            aggr_list.push_back(tmp);
+        } else aggr_list.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+        if(expressionType != ExprType::FIELD && expressionType != ExprType::FUNCTION && expressionType != ExprType::STAR && expressionType != ExprType::AGGRFUNC && expressionType != ExprType::ARITHMETIC && expressionType != ExprType::VALUE){
+          LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
+          return RC::INVALID_ARGUMENT;
+        }
+        
+        alias.push_back(cur.name);
+        expressions.push_back(std::move(build_result.first));
+        query_fields_size.push_back(query_fields.size());
+      }
+
+    }
   }
-
-  LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
-
   
 
   // create filter statement in `where` statement
@@ -207,10 +276,58 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
     }
   }
 
+  std::vector<AggrFuncExpr*> having_left; 
+  std::vector<AggrFuncExpr*> having_right; 
+  std::vector<Field> group_fields;
+  std::vector<CompOp> having_opts;
+  //create group-by statement
+  if (!select_sql.group_by_fields.empty()) {
+    for(auto &it : select_sql.group_by_fields) {
+      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(it.get(), tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
+      if(build_result.second != RC::SUCCESS){
+        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+        return build_result.second;
+      }
+
+      if (build_result.first->type() == ExprType::FIELD) {
+        FieldExpr* tmp = static_cast<FieldExpr*>(build_result.first.get());
+        group_fields.push_back(tmp->field());
+      } else {
+        LOG_WARN("non-field type in group-by isn't supported now");
+        return RC::UNIMPLENMENT;
+      }
+    }
+  }
+
+  //create having statement
+  if(!select_sql.having_conditions.empty()) {
+    for(auto &it : select_sql.having_conditions) {
+      having_opts.push_back(it->comp);
+      std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(it->left_expression.get(), tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
+      if(build_result.second != RC::SUCCESS){
+        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+        return build_result.second;
+      }
+      if(build_result.first->type() != ExprType::AGGRFUNC) {
+        AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
+        having_left.push_back(tmp);
+      } else having_left.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+
+      build_result = build_expression(it->right_expression.get(), tables, table_map, query_fields, std::string(db->name()), nullptr, nullptr);
+      if(build_result.second != RC::SUCCESS){
+        LOG_WARN("fail to build expression. error code = %d.", build_result.second);
+        return build_result.second;
+      }
+      if(build_result.first->type() != ExprType::AGGRFUNC) {
+        AggrFuncExpr* tmp = new AggrFuncExpr(AggrFuncExpr::Type::CONST_FIELD, std::move(build_result.first));
+        having_right.push_back(tmp);
+      } else having_right.push_back(static_cast<AggrFuncExpr*>(build_result.first.get()));
+    }
+  }
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->is_aggregate_ = is_aggregate;
-  select_stmt->expression_type = expressions.empty() ? UNDEFINED : expressions[0]->value_type();
+  select_stmt->expression_type = !query_fields.empty() || expressions.empty() ? UNDEFINED : expressions[0]->value_type();
   select_stmt->expressions_.swap(expressions);
   select_stmt->query_fields_size_.swap(query_fields_size);
   select_stmt->tables_.swap(tables);
@@ -221,6 +338,10 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   select_stmt->table_size_in_from = from_size;
   select_stmt->orders_fields_.swap(orders_fields);
   select_stmt->asc_.swap(asc);
+  select_stmt->having_left_.swap(having_left);
+  select_stmt->having_right_.swap(having_right);
+  select_stmt->having_opts_.swap(having_opts);
+  select_stmt->group_fields_.swap(group_fields);
   select_stmt->filter_stmt_ = filter_stmt;
   
   stmt = select_stmt;

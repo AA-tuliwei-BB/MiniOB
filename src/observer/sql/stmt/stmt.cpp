@@ -236,9 +236,6 @@ std::vector<AggrFuncExpr*>* aggr_list){
     static_cast<AggrFuncExpr::Type>(static_cast<int>(cur.func_type) - 1), std::move(son_parse.first)));
     if(aggr_list != nullptr){
       aggr_list->push_back(result.get());
-    } else {
-      LOG_WARN("aggregation function shouldn't appear in fliter expression");
-      return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT); 
     }
     // cur.set_name();
     result->set_name(cur.name);

@@ -305,6 +305,14 @@ struct OrderBySqlNode
 };
 
 /**
+ * @brief select语句的group by子句
+ * @ingroup SQLParser
+*/
+
+
+
+
+/**
  * @brief 描述一个select语句
  * @ingroup SQLParser
  * @details 一个正常的select语句描述起来比这个要复杂很多，这里做了简化。
@@ -322,6 +330,8 @@ struct SelectSqlNode
   std::vector<ConditionSqlNode*>                  conditions;     ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<OrderBySqlNode>>    orders;         ///< 排序条件
   std::vector<std::unique_ptr<JoinSqlNode>>       joins;          ///< inner join语句
+  std::vector<std::unique_ptr<ExprSqlNode>>       group_by_fields; ///< group_by
+  std::vector<ConditionSqlNode*>                  having_conditions;
   // ~SelectSqlNode() {
   //   for(auto &it : conditions){
   //     delete it;

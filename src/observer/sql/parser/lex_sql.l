@@ -127,6 +127,8 @@ IN                                      RETURN_TOKEN(IN_OP);
 EXISTS                                  RETURN_TOKEN(EXIST_OP);
 NULL                                    RETURN_TOKEN(NULL_VAL);
 ORDER{WHITE_SPACE}BY                    RETURN_TOKEN(ORDER_BY);
+GROUP{WHITE_SPACE}BY                    RETURN_TOKEN(GROUP_BY);
+HAVING                                  RETURN_TOKEN(HAVING);
 ASC                                     RETURN_TOKEN(ASC);
 AND                                     RETURN_TOKEN(AND);
 OR                                      RETURN_TOKEN(OR);

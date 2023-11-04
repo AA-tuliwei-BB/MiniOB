@@ -110,6 +110,8 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
         FROM
         WHERE
         ORDER_BY
+        GROUP_BY
+        HAVING
         ASC
         AS
         AND
@@ -186,6 +188,8 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <order_by_list>       order_by_stmt
 %type <bools>               order_type
 %type <complex_expr_list>   select_attr
+%type <complex_expr_list>   group_by_stmt
+%type <condition_list>      having
 %type <relation_list>       rel_list
 %type <relation_list>       id_list
 %type <expression>          expression
@@ -627,7 +631,7 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr from join_attr where order_by_stmt
+    SELECT select_attr from join_attr where group_by_stmt having order_by_stmt
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -652,9 +656,19 @@ select_stmt:        /*  select 语句的语法解析树*/
         delete $5;
       }
 
-      if ($6 != nullptr){
-        $$->selection.orders.swap(*$6);
+      if ($6 != nullptr) {
+        $$->selection.group_by_fields.swap(*$6);
         delete $6;
+      }
+      
+      if ($7 != nullptr) {
+        $$->selection.having_conditions.swap(*$7);
+        delete $7;
+      }
+
+      if ($8 != nullptr){
+        $$->selection.orders.swap(*$8);
+        delete $8;
       }
     }
     ;
@@ -719,6 +733,34 @@ on_attr:
       $$ = $2;
     }
     ;
+
+group_by_stmt:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | GROUP_BY complex_expr complex_expr_list
+    {
+      if($3 != nullptr){
+        $$ = $3;
+      } else $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
+
+      $$->push_back(std::unique_ptr<ExprSqlNode>($2));
+      std::reverse($$->begin(), $$->end());
+    }
+    ;
+
+having:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | HAVING condition_list
+    {
+      $$ = $2;
+    }
+    ;
+
 order_by_stmt:
     /* empty */
     {

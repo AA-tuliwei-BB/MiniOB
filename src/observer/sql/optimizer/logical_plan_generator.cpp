@@ -198,7 +198,7 @@ RC LogicalPlanGenerator::create_plan(
       asc[i] = true;
     }
     orderby_oper = unique_ptr<LogicalOperator>(
-        new OrderbyLogicalOperator(select_stmt->query_fields(), select_stmt->group_fields(), select_stmt->asc()));
+        new OrderbyLogicalOperator(select_stmt->query_fields(), select_stmt->group_fields(), asc));
   }
 
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator());
