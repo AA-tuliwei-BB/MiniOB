@@ -104,7 +104,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   std::vector<int> query_fields_size;
   std::vector<std::unique_ptr<Expression>> expressions;
   std::vector<AggrFuncExpr*> aggr_list;
-  std::vector<std::string> alias;
+  std::vector<std::string> alias, field_name;
   bool is_aggregate = (select_sql.expressions.size() != 0) ? select_sql.expressions[0]->is_aggregate : false;
   if(select_sql.group_by_fields.empty()) {
     for (int i = static_cast<int>(select_sql.expressions.size()) - 1; i >= 0; i--) {
@@ -122,6 +122,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
         if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
         {
           RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
+          field_name.push_back(rel.attribute_name);
           if(rel.relation_name.empty()) {
             for (Table *table : tables) {
               wildcard_fields(table, query_fields);
@@ -135,8 +136,11 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
               return RC::SCHEMA_TABLE_NOT_EXIST;
             }
           }
-        } else for (Table *table : tables) {
-          wildcard_fields(table, query_fields);
+        } else {
+          for (Table *table : tables) {
+            wildcard_fields(table, query_fields);
+          }
+          field_name.push_back(cur.name);
         }
         int cur_query_field = query_fields.size();
         for(int j = last_query_field; j < cur_query_field; ++j){
@@ -152,6 +156,10 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
           query_fields_size.push_back(j + 1);
         }
       } else {
+        if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR && !cur.have_alias) {
+          RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
+          field_name.push_back(rel.attribute_name);
+        } else field_name.push_back(cur.name);
         std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
         if(build_result.second != RC::SUCCESS){
           LOG_WARN("fail to build expression. error code = %d.", build_result.second);
@@ -162,6 +170,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
           LOG_WARN("invalid expression type(id = %d) in select statement.", static_cast<int>(expressionType));
           return RC::INVALID_ARGUMENT;
         }
+        
         
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
@@ -327,7 +336,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
   select_stmt->is_aggregate_ = is_aggregate;
-  select_stmt->expression_type = !query_fields.empty() || expressions.empty() ? UNDEFINED : expressions[0]->value_type();
+  select_stmt->expression_type = !group_fields.empty() || expressions.empty() ? UNDEFINED : expressions[0]->value_type();
   select_stmt->expressions_.swap(expressions);
   select_stmt->query_fields_size_.swap(query_fields_size);
   select_stmt->tables_.swap(tables);
@@ -342,6 +351,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   select_stmt->having_right_.swap(having_right);
   select_stmt->having_opts_.swap(having_opts);
   select_stmt->group_fields_.swap(group_fields);
+  select_stmt->field_name_.swap(field_name);
   select_stmt->filter_stmt_ = filter_stmt;
   
   stmt = select_stmt;

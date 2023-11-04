@@ -14,9 +14,9 @@ RC CreateSelectStmt::create(Db *db, const CreateSelectSqlNode &create_table, Stm
     std::vector<AttrInfoSqlNode> infos;
     CreateTableStmt* create_table_stmt;
     if(create_table.attr_infos.empty()) {
-        for(int i = 0; i < sub_select->alias().size(); ++i) {
+        for(int i = 0; i < sub_select->field_name().size(); ++i) {
             AttrInfoSqlNode info;
-            info.name = sub_select->alias()[i];
+            info.name = sub_select->field_name()[i];
             info.type = sub_select->expression()[i]->value_type();
             int len = 0;
             bool nullable = false;

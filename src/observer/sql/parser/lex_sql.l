@@ -125,6 +125,7 @@ LIKE                                    RETURN_TOKEN(LK);
 IS                                      RETURN_TOKEN(IS_OP);
 IN                                      RETURN_TOKEN(IN_OP);
 EXISTS                                  RETURN_TOKEN(EXIST_OP);
+NULLABLE                                RETURN_TOKEN(NULL_VAL);
 NULL                                    RETURN_TOKEN(NULL_VAL);
 ORDER{WHITE_SPACE}BY                    RETURN_TOKEN(ORDER_BY);
 GROUP{WHITE_SPACE}BY                    RETURN_TOKEN(GROUP_BY);

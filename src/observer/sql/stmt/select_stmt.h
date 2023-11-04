@@ -99,6 +99,11 @@ public:
     return asc_;
   }
 
+  const std::vector<std::string>& field_name() const
+  {
+    return field_name_;
+  }
+
   std::vector<AggrFuncExpr *> &having_left() { return having_left_; }
   std::vector<AggrFuncExpr *> &having_right() { return having_right_; }
   std::vector<Field>          &group_fields() { return group_fields_; }
@@ -107,6 +112,7 @@ public:
 private:
   bool is_aggregate_;
   std::vector<std::string> alias_;
+  std::vector<std::string> field_name_;
   std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
   std::vector<int> query_fields_size_;
