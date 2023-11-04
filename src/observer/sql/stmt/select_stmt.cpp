@@ -52,7 +52,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
 
   // collect tables in `from` statement
   std::vector<Table *> tables;
-  std::unordered_map<std::string, Table *> &table_map = *father_table_map;
+  std::unordered_map<std::string, Table *> table_map(*father_table_map);
   RC rc = RC::SUCCESS;
   for (size_t i = 0; i < select_sql.relations.size() / 2; i++) {
     const char *table_name = select_sql.relations[i * 2 + 1].c_str();
@@ -69,14 +69,14 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
 
     tables.push_back(table);
     if(!select_sql.relations[i * 2].empty()) {
-      if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
+      if(table_map.find(select_sql.relations[i * 2]) == table_map.end() || father_table_map->find(select_sql.relations[i * 2]) != father_table_map->end()){
         table_map[select_sql.relations[i * 2]] = table;
       } else {
         LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
         return RC::INVALID_ARGUMENT;
       }
     } else {
-      if(table_map.find(select_sql.relations[i * 2 + 1]) == table_map.end()){
+      if(table_map.find(select_sql.relations[i * 2 + 1]) == table_map.end() ||father_table_map->find(select_sql.relations[i * 2 + 1]) != father_table_map->end()){
         table_map[select_sql.relations[i * 2 + 1]] = table;
       } else {
         LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2 + 1].c_str());
