@@ -422,6 +422,13 @@ RC AggrFuncExpr::add_value(const Tuple &tuple)
     return RC::SUCCESS;
   }
 
+  if (func_type_ == Type::CONST_FIELD) {
+    if (son_value.compare(min_) != 0) {
+      return RC::INTERNAL;
+    }
+    return RC::SUCCESS;
+  }
+
   switch (son_value.attr_type())
   {
   case INTS: {
@@ -464,6 +471,10 @@ RC AggrFuncExpr::get_value(Value &value) const
 
   switch (func_type_)
   {
+  case Type::CONST_FIELD: {
+    value.set_value(min_);
+  } break;
+
   case Type::COUNT_FUNC: {
     value.set_int(count_);
   } break;

@@ -32,6 +32,7 @@ class CalcLogicalOperator;
 class AggrFuncLogicalOperator;
 class ExpressionLogicalOperator;
 class OrderbyLogicalOperator;
+class GroupbyLogicalOperator;
 class ValueListLogicalOperator;
 class CreateSelectLogicalOperator;
 
@@ -62,6 +63,7 @@ private:
   RC create_plan(AggrFuncLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(ExpressionLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(OrderbyLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
+  RC create_plan(GroupbyLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(ValueListLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(CreateSelectLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
 };

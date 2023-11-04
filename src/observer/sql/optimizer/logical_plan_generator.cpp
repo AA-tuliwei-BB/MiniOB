@@ -28,6 +28,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/aggrfunc_logical_operator.h"
 #include "sql/operator/expression_logical_operator.h"
 #include "sql/operator/orderby_logical_operator.h"
+#include "sql/operator/groupby_logical_operator.h"
 #include "sql/operator/value_list_logical_operator.h"
 #include "sql/operator/create_select_logical_operator.h"
 
@@ -190,9 +191,26 @@ RC LogicalPlanGenerator::create_plan(
         new OrderbyLogicalOperator(select_stmt->query_fields(), select_stmt->orders_fields(), select_stmt->asc()));
   }
 
+  if (select_stmt->group_fields().size() != 0) {
+    std::vector<bool> asc;
+    asc.resize(select_stmt->group_fields().size());
+    for (int i = 0; i < int(asc.size()); ++i) {
+      asc[i] = true;
+    }
+    orderby_oper = unique_ptr<LogicalOperator>(
+        new OrderbyLogicalOperator(select_stmt->query_fields(), select_stmt->group_fields(), select_stmt->asc()));
+  }
+
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator());
   unique_ptr<LogicalOperator> root_oper(nullptr);
-  if (select_stmt->is_aggregate()) {
+  // group-by 操作以group算子为根
+  if (select_stmt->group_fields().size() != 0) {
+    root_oper = unique_ptr<LogicalOperator>(new GroupbyLogicalOperator(select_stmt->aggr_list(),
+        select_stmt->group_fields(),
+        select_stmt->having_left(),
+        select_stmt->having_right(),
+        select_stmt->having_opts()));
+  } else if (select_stmt->is_aggregate()) {
     // 聚合函数以聚合算子为根
     root_oper = unique_ptr<LogicalOperator> (new AggrFuncLogicalOperator(std::move(select_stmt->expression()), std::move(select_stmt->aggr_list())));
   } else {

@@ -40,6 +40,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/expression_physical_operator.h"
 #include "sql/operator/orderby_logical_operator.h"
 #include "sql/operator/orderby_physical_operator.h"
+#include "sql/operator/groupby_logical_operator.h"
+#include "sql/operator/groupby_physical_operator.h"
 #include "sql/operator/value_list_logical_operator.h"
 #include "sql/operator/value_list_physical_operator.h"
 #include "sql/operator/create_select_logical_operator.h"
@@ -101,6 +103,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::ORDERBY: {
       return create_plan(static_cast<OrderbyLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::GROUPBY: {
+      return create_plan(static_cast<GroupbyLogicalOperator &>(logical_operator), oper);
     } break;
 
     case LogicalOperatorType::VALUELIST: {
@@ -450,6 +456,35 @@ RC PhysicalPlanGenerator::create_plan(OrderbyLogicalOperator &order_oper, std::u
   oper = unique_ptr<PhysicalOperator>(orderby_operator);
 
   LOG_TRACE("create a orderby physical operator");
+  return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(GroupbyLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper)
+{
+  vector<unique_ptr<LogicalOperator>> &child_opers = logical_oper.children();
+
+  unique_ptr<PhysicalOperator> child_phy_oper;
+
+  RC rc = RC::SUCCESS;
+  if (!child_opers.empty()) {
+    LogicalOperator *child_oper = child_opers.front().get();
+    rc = create(*child_oper, child_phy_oper);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create group-by logical operator's child physical operator. rc=%s", strrc(rc));
+      return rc;
+    }
+  }
+
+  GroupbyPhysicalOperator *groupby_operator = new GroupbyPhysicalOperator(
+      logical_oper.exprs(), logical_oper.fields(), logical_oper.left(), logical_oper.right(), logical_oper.opts());
+
+  if (child_phy_oper) {
+    groupby_operator->add_child(std::move(child_phy_oper));
+  }
+
+  oper = unique_ptr<PhysicalOperator>(groupby_operator);
+
+  LOG_TRACE("create a group-by physical operator");
   return rc;
 }
 

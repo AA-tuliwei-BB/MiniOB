@@ -149,6 +149,19 @@ public:
     }
   }
 
+  void SetTuple(const RowTuple &other) {
+    for (FieldExpr *spec : speces_) {
+      delete spec;
+    }
+    speces_.clear();
+    record_ = new Record(*other.record_);
+    table_ = other.table_;
+    this->speces_.reserve(other.speces_.size());
+    for (const auto &fieldexpr : other.speces_) {
+      speces_.push_back(new FieldExpr(fieldexpr->field()));
+    }
+  }
+
   virtual ~RowTuple()
   {
     for (FieldExpr *spec : speces_) {

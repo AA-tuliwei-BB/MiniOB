@@ -99,6 +99,11 @@ public:
     return asc_;
   }
 
+  std::vector<AggrFuncExpr *> &having_left() { return having_left_; }
+  std::vector<AggrFuncExpr *> &having_right() { return having_right_; }
+  std::vector<Field>          &group_fields() { return group_fields_; }
+  std::vector<CompOp>         &having_opts() { return having_opts_; }
+
 private:
   bool is_aggregate_;
   std::vector<std::string> alias_;
@@ -110,6 +115,12 @@ private:
   AttrType expression_type;
   std::vector<AggrFuncExpr*> aggr_list_; 
   FilterStmt *filter_stmt_ = nullptr;
+
+  // having
+  std::vector<AggrFuncExpr*> having_left_; 
+  std::vector<AggrFuncExpr*> having_right_; 
+  std::vector<Field> group_fields_;
+  std::vector<CompOp> having_opts_;
 
   std::vector<std::unique_ptr<JoinStmt>> joins_;
   std::vector<Field> orders_fields_;

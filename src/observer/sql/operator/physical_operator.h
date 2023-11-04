@@ -52,6 +52,7 @@ enum class PhysicalOperatorType
   EXPRESSION,
   ORDERBY,
   CREATE_SELECT,
+  GROUPBY
 };
 
 /**

@@ -389,6 +389,7 @@ public:
     COUNT_FUNC,
     AVG_FUNC,
     SUM_FUNC,
+    CONST_FIELD,
   };
 
 public:
