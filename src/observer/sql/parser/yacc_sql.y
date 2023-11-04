@@ -383,6 +383,15 @@ create_select_stmt:
       create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($5));
       
     }
+    | CREATE TABLE ID select_stmt
+    {
+      $$ = new ParsedSqlNode(SCF_CREATE_SELECT);
+      CreateSelectSqlNode &create_select = $$->create_select;
+      create_select.relation_name = $3;
+      free($3);
+      create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($4));
+      
+    }
     | CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE AS select_stmt
     {
       $$ = new ParsedSqlNode(SCF_CREATE_SELECT);
@@ -399,6 +408,23 @@ create_select_stmt:
       delete $5;
 
       create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($9));
+    }
+    | CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE select_stmt
+    {
+      $$ = new ParsedSqlNode(SCF_CREATE_SELECT);
+      CreateSelectSqlNode &create_select = $$->create_select;
+      create_select.relation_name = $3;
+      free($3);
+      std::vector<AttrInfoSqlNode> *src_attrs = $6;
+
+      if (src_attrs != nullptr) {
+        create_select.attr_infos.swap(*src_attrs);
+      }
+      create_select.attr_infos.emplace_back(*$5);
+      std::reverse(create_select.attr_infos.begin(), create_select.attr_infos.end());
+      delete $5;
+
+      create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($8));
     }
     ;
 
@@ -909,8 +935,9 @@ complex_expr_list:
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
-      if($3 != nullptr)
-        $2->set_name(std::string($3));
+      if($3 != nullptr) {
+        $2->set_name(std::string($3), true);
+      }
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($2));
     }
     ;
@@ -922,8 +949,10 @@ select_attr:
       } else {
         $$ = new std::vector<std::unique_ptr<ExprSqlNode>>;
       }
-      if($2 != nullptr)
-        $1->set_name(std::string($2));
+      if($2 != nullptr) {
+        $1->set_name(std::string($2), true);
+      }
+        
       $$->emplace_back(std::unique_ptr<ExprSqlNode>($1));
     }
     ;

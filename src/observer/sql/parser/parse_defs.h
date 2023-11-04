@@ -63,12 +63,13 @@ struct ExprSqlNode{
   virtual ~ExprSqlNode() = default;
 
   virtual ExprSqlNode::Type get_type() const = 0;
-  virtual RC set_name(std::string n){
+  virtual RC set_name(std::string n, bool set_alias = false){
+    have_alias = set_alias;
     name = n;
     return RC::SUCCESS;
   }
   std::string name;
-  bool need_extract, is_aggregate;
+  bool need_extract, is_aggregate, have_alias = false;
 };
 
 struct ValueSqlNode : public ExprSqlNode
@@ -85,7 +86,7 @@ struct ValueSqlNode : public ExprSqlNode
   RC set_name(std::string n){
     if(!name.empty())
       return RC::SUCCESS;
-    name = n;
+    ExprSqlNode::set_name(n);
     return RC::SUCCESS;
   }
 };
@@ -140,7 +141,7 @@ struct ArithSqlNode : public ExprSqlNode
   RC set_name(std::string n){
     if(!name.empty())
       return RC::SUCCESS;
-    name = n;
+    ExprSqlNode::set_name(n);
     return RC::SUCCESS;
   }
   RC set_name(){

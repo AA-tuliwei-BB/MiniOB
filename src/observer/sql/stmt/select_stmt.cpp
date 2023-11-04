@@ -106,6 +106,10 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
       return RC::INVALID_ARGUMENT;
     }
     if(cur.need_extract){
+      if(cur.have_alias) {
+        LOG_WARN("star expression shouldn't have alias");
+        return RC::INVALID_ARGUMENT;
+      }
       int last_query_field = query_fields.size();
       if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
       {
