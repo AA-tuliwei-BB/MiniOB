@@ -183,7 +183,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
           query_fields.push_back(Field(table, field_meta));
           std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
           
-          // result->set_name(relation_attr->name[0]);
+          result->set_name(relation_attr->name);
           return std::make_pair(std::move(result), RC::SUCCESS);
         }
       }
@@ -202,7 +202,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
 
       query_fields.push_back(Field(table, field_meta));
       std::unique_ptr<Expression> result(new FieldExpr(table, field_meta));
-      // result->set_name(relation_attr->name[0]);
+       result->set_name(relation_attr->name);
       return std::make_pair(std::move(result), RC::SUCCESS);
     }
   }
@@ -210,7 +210,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
   case ExprSqlNode::Type::VALUE_EXPR:{
     ValueSqlNode &cur = *(ValueSqlNode*)father;
     std::unique_ptr<Expression> result(new ValueExpr(cur.val));
-    // result->set_name(cur.name[0]);
+    result->set_name(cur.name);
     return std::make_pair(std::move(result), RC::SUCCESS);
   } 
   break;
@@ -241,7 +241,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
       return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT); 
     }
     // cur.set_name();
-    // result->set_name(cur.name[0]);
+    result->set_name(cur.name);
     return std::make_pair(std::move(result), RC::SUCCESS);
   }
   break;
@@ -282,7 +282,7 @@ std::vector<AggrFuncExpr*>* aggr_list){
     if(result_type != FuncExpr::Type::LENGTH && cur.attr.get() != nullptr) {
       auto attr_parse = build_expression(cur.attr.get(), tables, table_map, query_fields, db_name, star_replacement, aggr_list);
       // cur.set_name();
-      // result->set_name(cur.name[0]);
+      result->set_name(cur.name);
       if(attr_parse.second != RC::SUCCESS){
         LOG_WARN("Error when parsing type = %d expression sql node, error_code = %d.", cur.get_type(), attr_parse.second);
       return std::make_pair(std::unique_ptr<Expression>(nullptr), attr_parse.second);

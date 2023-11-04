@@ -68,14 +68,20 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
     }
 
     tables.push_back(table);
-    table_map.insert(std::pair<std::string, Table *>(table_name, table));
     if(!select_sql.relations[i * 2].empty()) {
-      // if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
+      if(table_map.find(select_sql.relations[i * 2]) == table_map.end()){
         table_map[select_sql.relations[i * 2]] = table;
-      // } else {
-      //   LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
-      //   return RC::INVALID_ARGUMENT;
-      // }
+      } else {
+        LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2].c_str());
+        return RC::INVALID_ARGUMENT;
+      }
+    } else {
+      if(table_map.find(select_sql.relations[i * 2 + 1]) == table_map.end()){
+        table_map[select_sql.relations[i * 2 + 1]] = table;
+      } else {
+        LOG_ERROR("name %s refers to multiple table", select_sql.relations[i * 2 + 1].c_str());
+        return RC::INVALID_ARGUMENT;
+      }
     }
   }
   std::vector<std::unique_ptr<JoinStmt>> joins;
@@ -95,6 +101,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
     default_table = tables[0];
   }
   std::vector<Field> query_fields;
+  std::vector<int> query_fields_size;
   std::vector<std::unique_ptr<Expression>> expressions;
   std::vector<AggrFuncExpr*> aggr_list;
   std::vector<std::string> alias;
@@ -141,6 +148,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
         ExprType expressionType = build_result.first->type();
         alias.push_back(cur.name);
         expressions.push_back(std::move(build_result.first));
+        query_fields_size.push_back(query_fields.size());
       }
     }else {
       std::pair<std::unique_ptr<Expression>, RC> build_result = build_expression(&cur, tables, table_map, query_fields, std::string(db->name()), nullptr, &aggr_list);
@@ -156,6 +164,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
       
       alias.push_back(cur.name);
       expressions.push_back(std::move(build_result.first));
+      query_fields_size.push_back(query_fields.size());
     }
     
   }
@@ -203,6 +212,7 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
   select_stmt->is_aggregate_ = is_aggregate;
   select_stmt->expression_type = expressions.empty() ? UNDEFINED : expressions[0]->value_type();
   select_stmt->expressions_.swap(expressions);
+  select_stmt->query_fields_size_.swap(query_fields_size);
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_.swap(alias);

@@ -14,14 +14,20 @@ RC CreateSelectStmt::create(Db *db, const CreateSelectSqlNode &create_table, Stm
     std::vector<AttrInfoSqlNode> infos;
     CreateTableStmt* create_table_stmt;
     if(create_table.attr_infos.empty()) {
-        for(auto &it : sub_select->query_fields()) {
-        AttrInfoSqlNode info;
-        info.name = std::string(it.meta()->name());
-        info.length = it.meta()->len();
-        info.type = it.meta()->type();
-        info.nullable = it.meta()->nullable();
-        infos.push_back(info);
-    }
+        for(int i = 0; i < sub_select->alias().size(); ++i) {
+            AttrInfoSqlNode info;
+            info.name = sub_select->alias()[i];
+            info.type = sub_select->expression()[i]->value_type();
+            int len = 0;
+            bool nullable = false;
+            for (int j = i == 0 ? 0 : sub_select->query_fields_size()[i-1]; j < sub_select->query_fields_size()[i]; ++j) {
+                len = std::max(len, sub_select->query_fields()[j].meta()->len());
+                nullable |= sub_select->query_fields()[j].meta()->nullable();
+            }
+            info.length = len;
+            info.nullable = nullable;
+            infos.push_back(info);
+        }
         create_table_stmt = new CreateTableStmt(create_table.relation_name, infos);
     } else {
         create_table_stmt = new CreateTableStmt(create_table.relation_name, create_table.attr_infos);

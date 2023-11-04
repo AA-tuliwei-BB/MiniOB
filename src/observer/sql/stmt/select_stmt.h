@@ -56,6 +56,10 @@ public:
   {
     return query_fields_;
   }
+  const std::vector<int> &query_fields_size() const
+  {
+    return query_fields_size_;
+  }
   const std::vector<std::string> &alias() const
   {
     return alias_;
@@ -100,6 +104,7 @@ private:
   std::vector<std::string> alias_;
   std::vector<std::unique_ptr<Expression>> expressions_;
   std::vector<Field> query_fields_;
+  std::vector<int> query_fields_size_;
   std::vector<Table *> tables_;
   int table_size_in_from;
   AttrType expression_type;
