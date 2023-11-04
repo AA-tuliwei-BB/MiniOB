@@ -383,6 +383,23 @@ create_select_stmt:
       create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($5));
       
     }
+    | CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE AS select_stmt
+    {
+      $$ = new ParsedSqlNode(SCF_CREATE_SELECT);
+      CreateSelectSqlNode &create_select = $$->create_select;
+      create_select.relation_name = $3;
+      free($3);
+      std::vector<AttrInfoSqlNode> *src_attrs = $6;
+
+      if (src_attrs != nullptr) {
+        create_select.attr_infos.swap(*src_attrs);
+      }
+      create_select.attr_infos.emplace_back(*$5);
+      std::reverse(create_select.attr_infos.begin(), create_select.attr_infos.end());
+      delete $5;
+
+      create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($9));
+    }
     ;
 
 create_table_stmt:    /*create table 语句的语法解析树*/
@@ -821,6 +838,14 @@ complex_expr:
     | '*' {
       RelAttrSqlNode* attr = new RelAttrSqlNode;
       attr->relation_name  = "";
+      attr->attribute_name = "*";
+      attr->need_extract = true;
+      $$ = attr;
+    }
+    | ID DOT '*' {
+      RelAttrSqlNode* attr = new RelAttrSqlNode;
+      attr->relation_name  = $1;
+      free($1);
       attr->attribute_name = "*";
       attr->need_extract = true;
       $$ = attr;

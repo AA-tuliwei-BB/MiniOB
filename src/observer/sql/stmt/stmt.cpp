@@ -299,6 +299,12 @@ std::vector<AggrFuncExpr*>* aggr_list){
   break;
   case ExprSqlNode::Type::ARITHMATIC_EXPR:{
     ArithSqlNode &cur = *(ArithSqlNode*)father;
+    
+    if(cur.need_extract == true){
+      LOG_WARN("invalid * argument for type=%d expression sql node.", cur.get_type());
+      return std::make_pair(std::unique_ptr<Expression>(nullptr), RC::INVALID_ARGUMENT);
+    }
+
     cur.set_name();
     std::pair<std::unique_ptr<Expression>, RC> left_parse = 
     build_expression(cur.left.get(), tables, table_map, query_fields, db_name, star_replacement, aggr_list);

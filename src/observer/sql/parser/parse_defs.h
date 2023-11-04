@@ -409,6 +409,7 @@ struct CreateSelectSqlNode
 {
   std::string                  relation_name;         ///< Relation name
   std::unique_ptr<ParsedSqlNode> select_node;         ///< sub-select sql node
+  std::vector<AttrInfoSqlNode> attr_infos;            ///< attributes
 };
 
 /**

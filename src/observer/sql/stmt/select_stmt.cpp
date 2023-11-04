@@ -107,7 +107,23 @@ RC SelectStmt::create_sub_query(Db *db, SelectSqlNode &select_sql, Stmt *&stmt, 
     }
     if(cur.need_extract){
       int last_query_field = query_fields.size();
-      for (Table *table : tables) {
+      if(cur.get_type() == ExprSqlNode::Type::REL_ATTR_EXPR)
+      {
+        RelAttrSqlNode &rel = *static_cast<RelAttrSqlNode*>(&cur);
+        if(rel.relation_name.empty()) {
+          for (Table *table : tables) {
+            wildcard_fields(table, query_fields);
+          }
+        } else {
+          if(table_map.find(rel.relation_name) != table_map.end()) {
+            Table* cur_table = table_map[rel.relation_name];
+            wildcard_fields(cur_table, query_fields);
+          } else {
+            LOG_WARN("unable to find table %s", rel.relation_name);
+            return RC::SCHEMA_TABLE_NOT_EXIST;
+          }
+        }
+      } else for (Table *table : tables) {
         wildcard_fields(table, query_fields);
       }
       int cur_query_field = query_fields.size();
