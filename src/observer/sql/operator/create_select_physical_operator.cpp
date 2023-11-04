@@ -33,17 +33,6 @@ RC CreateSelectPhysicalOperator::next()
 {
   RC rc = RC::SUCCESS;
   while ((rc = children_[0]->next()) == RC::SUCCESS) {
-    // get next from select
-    if (rc != RC::SUCCESS && rc != RC::RECORD_EOF) {
-      // drop table if fail
-      db_->drop_table(table_->table_meta().name());
-      table_ = nullptr;
-      return RC::INTERNAL;
-    }
-    if (rc == RC::RECORD_EOF) {
-      return rc;
-    }
-
     // get vector
     Tuple             *tuple = children_[0]->current_tuple();
     std::vector<Value> values;
@@ -68,6 +57,14 @@ RC CreateSelectPhysicalOperator::next()
       LOG_WARN("failed to insert record by transaction. rc=%s", strrc(rc));
       return rc;
     }
+  }
+
+  // get next from select
+  if (rc != RC::RECORD_EOF) {
+    // drop table if fail
+    db_->drop_table(table_->table_meta().name());
+    table_ = nullptr;
+    return RC::INTERNAL;
   }
   return rc;
 }

@@ -138,6 +138,7 @@ public:
   {
     if (owner_ && data_ != nullptr) {
       free(data_);
+      owner_ = false;
       data_ = nullptr;
     }
   }
