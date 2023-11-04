@@ -200,6 +200,7 @@ ArithSqlNode *create_complex_expression(ArithSqlNode::Type type,
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
 %type <sql_node>            create_table_stmt
+%type <sql_node>            create_select_stmt
 %type <sql_node>            drop_table_stmt
 %type <sql_node>            show_tables_stmt
 %type <sql_node>            desc_table_stmt
@@ -238,6 +239,7 @@ command_wrapper:
   | update_stmt
   | delete_stmt
   | create_table_stmt
+  | create_select_stmt
   | drop_table_stmt
   | show_tables_stmt
   | desc_table_stmt
@@ -370,6 +372,19 @@ drop_index_stmt:      /*drop index 语句的语法解析树*/
       free($5);
     }
     ;
+
+create_select_stmt:
+    CREATE TABLE ID AS select_stmt
+    {
+      $$ = new ParsedSqlNode(SCF_CREATE_SELECT);
+      CreateSelectSqlNode &create_select = $$->create_select;
+      create_select.relation_name = $3;
+      free($3);
+      create_select.select_node = std::move(std::unique_ptr<ParsedSqlNode>($5));
+      
+    }
+    ;
+
 create_table_stmt:    /*create table 语句的语法解析树*/
     CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE
     {

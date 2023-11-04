@@ -30,7 +30,7 @@ public:
   SelectStmt * select_stmt() { return select_stmt_; }
   Db *db() { return db_; }
 
-  //static RC create(Db *db, const CreateSelectSqlNode &create_table, Stmt *&stmt);
+  static RC create(Db *db, const CreateSelectSqlNode &create_table, Stmt *&stmt);
 
 private:
   CreateTableStmt *create_table_stmt_;
